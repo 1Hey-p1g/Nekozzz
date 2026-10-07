@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry"><rect><x>0</x><y>0</y><width>1320</width><height>820</height></rect></property>
+  <property name="windowTitle"><string>Nekozzz · 投标资料工作台</string></property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="spacing"><number>0</number></property>
+    <property name="leftMargin"><number>0</number></property>
+    <property name="topMargin"><number>0</number></property>
+    <property name="rightMargin"><number>0</number></property>
+    <property name="bottomMargin"><number>0</number></property>
+    <item><widget class="QFrame" name="navigation">
+     <property name="minimumSize"><size><width>212</width><height>0</height></size></property>
+     <property name="maximumSize"><size><width>212</width><height>16777215</height></size></property>
+     <layout class="QVBoxLayout" name="navLayout">
+      <property name="leftMargin"><number>14</number></property>
+      <property name="topMargin"><number>20</number></property>
+      <property name="rightMargin"><number>14</number></property>
+      <property name="bottomMargin"><number>18</number></property>
+      <property name="spacing"><number>7</number></property>
+      <item><widget class="QLabel" name="brand"><property name="text"><string>Nekozzz</string></property></widget></item>
+      <item><widget class="QLabel" name="businessGroup"><property name="text"><string>业务功能</string></property></widget></item>
+      <item><widget class="QPushButton" name="navPersonSearch"><property name="text"><string>人员搜索与选择</string></property></widget></item>
+      <item><widget class="QPushButton" name="navProjectSearch"><property name="text"><string>业绩搜索与选择</string></property></widget></item>
+      <item><widget class="QPushButton" name="navQualSearch"><property name="text"><string>公司资质搜索与选择</string></property></widget></item>
+      <item><widget class="QPushButton" name="navAwardSearch"><property name="text"><string>获奖工程选择</string></property></widget></item>
+      <item><widget class="QPushButton" name="navFinanceSearch"><property name="text"><string>财务报告选择</string></property></widget></item>
+      <item><widget class="QPushButton" name="navPersonAutoFill"><property name="text"><string>自动填表（实验性）</string></property></widget></item>
+      <item><widget class="QLabel" name="maintenanceGroup"><property name="text"><string>资料维护</string></property></widget></item>
+      <item><widget class="QPushButton" name="navPersonManage"><property name="text"><string>人员资料管理</string></property></widget></item>
+      <item><widget class="QPushButton" name="navQualManage"><property name="text"><string>公司资质管理</string></property></widget></item>
+      <item><widget class="QPushButton" name="navProjectManage"><property name="text"><string>工程业绩管理</string></property></widget></item>
+      <item><widget class="QPushButton" name="navAwardFinanceManage"><property name="text"><string>获奖及财务管理</string></property></widget></item>
+      <item><spacer name="navSpacer"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint"><size><width>20</width><height>40</height></size></property></spacer></item>
+      <item><widget class="QPushButton" name="navSettings"><property name="text"><string>设置</string></property></widget></item>
+      <item><widget class="QPushButton" name="navAbout"><property name="text"><string>关于</string></property></widget></item>
+     </layout>
+    </widget></item>
+    <item><widget class="QStackedWidget" name="workspace"/></item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

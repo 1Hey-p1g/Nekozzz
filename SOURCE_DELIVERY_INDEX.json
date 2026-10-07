@@ -1,0 +1,95 @@
+{
+  "application": "source/ (current production source view, file hashes in application_source_manifest.json)",
+  "upstream_archives": [
+    {
+      "filename": "Python-3.14.7.tar.xz",
+      "sha256": "3b48dac8fb59f62eaa67ac83c1eb12bda1b7a08406dd286e252c11a66be27f81",
+      "bytes": 24053924,
+      "url": "https://www.python.org/ftp/python/3.14.7/Python-3.14.7.tar.xz",
+      "role": "exact upstream source archive; preserves scripts/notices/thirdparty as supplied",
+      "members": 5557
+    },
+    {
+      "filename": "pyside-setup-everywhere-src-6.11.2.tar.xz",
+      "sha256": "cba47efbaad1bedd529725cbc14e21f156c7a19366f07b3edfbb076ffd7afdf8",
+      "bytes": 18053248,
+      "url": "https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-6.11.2-src/pyside-setup-everywhere-src-6.11.2.tar.xz",
+      "role": "exact upstream source archive; preserves scripts/notices/thirdparty as supplied",
+      "members": 5572
+    },
+    {
+      "filename": "qtbase-everywhere-src-6.11.2.tar.xz",
+      "sha256": "5b2e00eccaf5a4d8c14134ffa0ea8dfd0a35ae1ffc7f8d87fa4305a1ed23cf22",
+      "bytes": 50582668,
+      "url": "https://download.qt.io/official_releases/qt/6.11/6.11.2/submodules/qtbase-everywhere-src-6.11.2.tar.xz",
+      "role": "exact upstream source archive; preserves scripts/notices/thirdparty as supplied",
+      "members": 26851
+    },
+    {
+      "filename": "qttools-everywhere-src-6.11.2.tar.xz",
+      "sha256": "9ea75af35c512f7e09e61c8c3af3997f13b4d43bb099cf43fcec470126b4041e",
+      "bytes": 10226452,
+      "url": "https://download.qt.io/official_releases/qt/6.11/6.11.2/submodules/qttools-everywhere-src-6.11.2.tar.xz",
+      "role": "exact upstream source archive; preserves scripts/notices/thirdparty as supplied",
+      "members": 6780
+    },
+    {
+      "filename": "qtsvg-everywhere-src-6.11.2.tar.xz",
+      "sha256": "d594337feca84c26fb67fe87b85e6a5c12fda404b611d905f9d138210c311876",
+      "bytes": 2341860,
+      "url": "https://download.qt.io/official_releases/qt/6.11/6.11.2/submodules/qtsvg-everywhere-src-6.11.2.tar.xz",
+      "role": "exact upstream source archive; preserves scripts/notices/thirdparty as supplied",
+      "members": 727
+    },
+    {
+      "filename": "pymupdf-1.28.2.tar.gz",
+      "sha256": "5e0be7908a715aa20333caddd73f1d6f01e4cd0c26e869fa2dd0b7f344da2249",
+      "bytes": 87903557,
+      "url": "https://files.pythonhosted.org/packages/a3/fb/b6761fa2d5266f2cdb24c3b91f4023070ab7848381417678e7a289a1d52a/pymupdf-1.28.2.tar.gz",
+      "role": "exact upstream source archive; preserves scripts/notices/thirdparty as supplied",
+      "members": 357
+    },
+    {
+      "filename": "mupdf-1.28.2-source.tar.gz",
+      "sha256": "44075a84e329db55b9bef5f342a70fd26d69e48ad1d33cb89d9664581c641156",
+      "bytes": 68898646,
+      "url": "https://mupdf.com/downloads/archive/mupdf-1.28.2-source.tar.gz",
+      "role": "exact upstream source archive; preserves scripts/notices/thirdparty as supplied",
+      "members": 8689
+    },
+    {
+      "filename": "openssl-3.5.7.tar.gz",
+      "sha256": "a8c0d28a529ca480f9f36cf5792e2cd21984552a3c8e4aa11a24aa31aeac98e8",
+      "bytes": 53153930,
+      "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.7/openssl-3.5.7.tar.gz",
+      "role": "exact upstream source archive; preserves scripts/notices/thirdparty as supplied",
+      "members": 6048
+    },
+    {
+      "filename": "PyMuPDF-12786d12-github.tar.gz",
+      "sha256": "1fa0dd431310f2d067db6f0b7babe320b5abc96427bdca099507c06922ba9a8e",
+      "bytes": 97596979,
+      "url": "https://api.github.com/repos/pymupdf/PyMuPDF/tarball/12786d12b2962a1d77fd13b103162eddf749644c",
+      "role": "exact wheel-recorded revision, includes CI/scripts omitted from sdist"
+    }
+  ],
+  "patches": "No Nekozzz downstream source/native patches. Qt installed typesystem path flattening is encoded in supplied PySideModules.cmake. MuPDF >=1.28 TOFU_CJK_EXT configuration and optional VS project generation are encoded in supplied scripts. No requirement to recover automatically regenerable outputs or original entire wheel build logs.",
+  "remaining_delivery_items": [],
+  "not_required": [
+    "bit-for-bit rebuild",
+    "exact build hostname/timestamp/SDK patch version alone",
+    "universal hardware testing"
+  ],
+  "publication": "Only manual publication remains: upload same-release immutable application/library source and source companions alongside unchanged binary, fill real download URLs, verify recipient access and SHA256. No publication performed.",
+  "closure_classification": "B. READY EXCEPT FOR MANUAL PUBLICATION",
+  "build_companion": {
+    "file": "CORRESPONDING_SOURCE_BUILD_GUIDE.md",
+    "sha256": "13ad99901a269deb9568f8e5e7c83787607aca3118e5e8ab95b932f50ec27ba8",
+    "executed": false,
+    "qt_binding_input_files_matched": 131,
+    "qt_native_record_files_matched": 22,
+    "qt_status": "complete practical shared-library/generator source and replacement route",
+    "mupdf_status": "complete source and documented automatic regeneration route; SWIG 4.4.1"
+  },
+  "office_metadata": "Developer decision A: approve existing Office creator/lastModifiedBy and local-directory disclosure; resources unchanged."
+}
