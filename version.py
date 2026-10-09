@@ -1,7 +1,7 @@
 """Single source for independent application, schema and backup versions."""
 
 APP_NAME = 'Nekozzz'
-APP_VERSION = '0.9.2'
+APP_VERSION = '0.9.3'
 APP_SUBTITLE = '摸鱼也要做标书'
 APP_COPYRIGHT = 'Copyright © 2026 1Hey-p1g'
 APP_LICENSE = 'AGPL-3.0-only'

@@ -13,6 +13,7 @@ from gui.project_attachments import ProjectAttachmentEditor
 from gui.word_styles import confirm_style_fallback
 from services.report_word import ReportWordPreflightError, ReportWordWriteError
 from services.word_service import WordNoActiveDocumentError, WordNotRunningError, WordServiceError
+from services.office_writer import writer_error_message
 
 
 class ReportSearchPage(QWidget):
@@ -102,7 +103,7 @@ class ReportSearchPage(QWidget):
         self.selected_count = QLabel()
         self.clear_selection_button = QPushButton('清空本次选择')
         self.insert_title = QCheckBox('插入获奖名称' if self.is_award else '插入财务报告标题')
-        self.output_button = QPushButton('插入到 Word')
+        self.output_button = QPushButton('插入资料')
         for widget in (self.selected_count, self.clear_selection_button, self.insert_title):
             actions.addWidget(widget)
         actions.addStretch()
@@ -201,14 +202,10 @@ class ReportSearchPage(QWidget):
             plan = self.output_service.insert(self.selected_ids, self.settings_service.load(),
                 insert_title=self.insert_title.isChecked(),
                 confirm_style_fallback=lambda missing: confirm_style_fallback(self, missing))
-        except WordNotRunningError:
-            self.error_label.setText('未检测到正在运行的 Microsoft Word，请先打开 Word 文档并将光标放到需要插入的位置。')
-        except WordNoActiveDocumentError:
-            self.error_label.setText('Microsoft Word 当前没有活动文档，请先打开目标文档。')
         except (ReportWordPreflightError, ReportWordWriteError, WordServiceError) as error:
-            self.error_label.setText(str(error))
+            self.error_label.setText(writer_error_message(error, self.settings_service.load().writer_target))
         except Exception as error:
-            self.error_label.setText(f'Word 输出失败：{error}')
+            self.error_label.setText('文档输出失败：' + writer_error_message(error, self.settings_service.load().writer_target))
         else:
             self.error_label.clear()
             self.notify(f'已插入 {len(plan.blocks)} 项{self.repository.label}，共 {plan.image_count} 张附件图片')

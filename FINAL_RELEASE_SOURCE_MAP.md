@@ -1,9 +1,9 @@
-# Final Nekozzz 0.9.2 release source map
+# Nekozzz 0.9.3 RC source map
 
-Authority: accepted RC executable SHA256
-`4eb5f4a23773fe2dbf5ec1d7357b0fe3a9498d31b6bee12efc43904049780724`.
+Authority: built 0.9.3 RC executable SHA256
+`84c2240bff1b8e5003989592e1df4524cadf13c579d2bc98c41066654a868823`.
 
-Application: current source view source/; versions 0.9.2 / schema 1 / backup 1;
+Application: current source view source/; versions 0.9.3 / schema 1 / backup 1;
 validated stdlib adapter, no lxml. Exact manifest accompanies that view.
 
 Qt Core/Gui/Widgets/OpenGL/OpenGLWidgets and qwindows/style/jpeg/ico come from
@@ -35,5 +35,5 @@ CPython LICENSE contains interpreter embedded library notices. PyInstaller
 bootloader exception applies to its runtime, not other components.
 
 All archive names/hashes/official URLs: SOURCE_DELIVERY_INDEX.json. Native byte
-identity and mappings: report/final_release_clearance/. The practical source/generation/replacement set is complete locally. Public source
+identity and mappings: report/release_0.9.3/ (fresh RC verification) and report/final_release_clearance/ (hash-matched upstream evidence). The practical source/generation/replacement set is complete locally. Public source
 conveyance awaits manual publication and recipient-access verification.

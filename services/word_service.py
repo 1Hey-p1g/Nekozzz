@@ -41,9 +41,14 @@ class WordOperationError(WordServiceError):
 
 
 class WordService:
-    def __init__(self, application):
+    def __init__(self, application, *, application_name='Microsoft Word'):
         """Accept an existing COM application (or a fake in isolated tests)."""
         self.application = application
+        self.application_name = application_name
+
+    def operation_error(self, action, error=None):
+        detail = f'；COM：{error}' if error is not None else ''
+        return WordOperationError(f'{self.application_name}：{action}{detail}')
 
     @classmethod
     def connect_existing_word(cls, get_active_object=None):
@@ -60,14 +65,14 @@ class WordService:
     def active_document(self):
         try:
             if self.application.Documents.Count == 0:
-                raise WordNoActiveDocumentError("Word has no active document")
+                raise WordNoActiveDocumentError(f'{self.application_name} 当前没有活动文档')
             document = self.application.ActiveDocument
         except WordNoActiveDocumentError:
             raise
         except pywintypes.com_error as error:
-            raise WordOperationError("Failed to read Word ActiveDocument") from error
+            raise self.operation_error('无法读取活动文档', error) from error
         if document is None:
-            raise WordNoActiveDocumentError("Word has no active document")
+            raise WordNoActiveDocumentError(f'{self.application_name} 当前没有活动文档')
         return document
 
     def selection(self):
@@ -75,15 +80,15 @@ class WordService:
         try:
             selection = self.application.Selection
         except pywintypes.com_error as error:
-            raise WordOperationError("Failed to read Word Selection") from error
+            raise self.operation_error('无法获取光标位置', error) from error
         if selection is None:
-            raise WordOperationError("Word has no current Selection")
+            raise self.operation_error('无法获取当前光标位置')
         return selection
 
     @staticmethod
     def _style_name(name):
         if not isinstance(name, str) or not name.strip():
-            raise WordStyleError(f"Invalid Word style name: {name!r}")
+            raise WordStyleError(f'样式名称必须是非空文本：{name!r}')
         return name.strip()
 
     def style_exists(self, name):
@@ -103,7 +108,7 @@ class WordService:
         try:
             return self.active_document().Styles.Item(WD_STYLE_NORMAL)
         except pywintypes.com_error as error:
-            raise WordStyleError("Word built-in Normal style is unavailable") from error
+            raise WordStyleError(f'{self.application_name} 内置正文样式不可用；COM：{error}') from error
 
     def resolve_style(self, name=None, *, use_normal=False):
         """Resolve the requested style; fallback requires explicit caller intent."""
@@ -113,14 +118,14 @@ class WordService:
         try:
             return self.active_document().Styles.Item(name)
         except pywintypes.com_error as error:
-            raise WordStyleError(f"Word style is unavailable: {name!r}") from error
+            raise WordStyleError(f'{self.application_name} 样式不可用：{name!r}；COM：{error}') from error
 
     def set_selection_style(self, name=None, *, use_normal=False):
         style = self.resolve_style(name, use_normal=use_normal)
         try:
             self.selection().Paragraphs(1).Style = style
         except pywintypes.com_error as error:
-            raise WordOperationError("Failed to set Selection paragraph style") from error
+            raise self.operation_error('无法设置段落样式', error) from error
 
     def insert_text(self, text):
         if not isinstance(text, str):
@@ -128,13 +133,13 @@ class WordService:
         try:
             self.selection().TypeText(text)
         except pywintypes.com_error as error:
-            raise WordOperationError("Failed to insert text") from error
+            raise self.operation_error('文字插入失败，可能已有部分内容写入', error) from error
 
     def insert_paragraph(self):
         try:
             self.selection().TypeParagraph()
         except pywintypes.com_error as error:
-            raise WordOperationError("Failed to insert paragraph") from error
+            raise self.operation_error('段落插入失败，可能已有部分内容写入', error) from error
 
     def available_page_width(self):
         """Current Selection Section width in Word points."""
@@ -142,9 +147,9 @@ class WordService:
             setup = self.selection().Sections(1).PageSetup
             width = setup.PageWidth - setup.LeftMargin - setup.RightMargin
         except pywintypes.com_error as error:
-            raise WordOperationError("Failed to read current Section PageSetup") from error
+            raise self.operation_error('无法读取当前节的页面尺寸', error) from error
         if width <= 0:
-            raise WordOperationError(f"Current Section has invalid usable width: {width!r}")
+            raise self.operation_error(f'当前节的可用宽度无效：{width!r}')
         return width
 
     def insert_inline_image(self, path, *, shrink_oversized=True, enlarge_small=False):
@@ -165,19 +170,19 @@ class WordService:
                     shape.Width = usable_width
             return shape
         except pywintypes.com_error as error:
-            raise WordOperationError(f"Failed to insert inline image: {image_path}") from error
+            raise self.operation_error(f'图片插入失败：{image_path}，可能已有部分内容写入', error) from error
 
     def insert_page_break(self):
         try:
             self.selection().InsertBreak(WD_PAGE_BREAK)
         except pywintypes.com_error as error:
-            raise WordOperationError("Failed to insert page break") from error
+            raise self.operation_error('分页插入失败，可能已有部分内容写入', error) from error
 
     def insert_open_xml(self, insertion_range, xml):
         """Insert at an explicitly collapsed Range; no business/template knowledge."""
         try:
             if insertion_range.Start != insertion_range.End:
-                raise WordOperationError("Open XML insertion requires a collapsed Range")
+                raise self.operation_error('Open XML 插入位置必须为折叠光标')
             insertion_range.InsertXML(xml)
         except pywintypes.com_error as error:
-            raise WordOperationError("Failed to insert Word Open XML") from error
+            raise self.operation_error('InsertXML 插入失败，可能已有部分内容写入', error) from error

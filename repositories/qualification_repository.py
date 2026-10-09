@@ -5,6 +5,9 @@ from repositories.person_repository import _escape_like
 
 
 QUALIFICATION_FIELDS = ('公司ID', '资质证书名称', '资质等级', '发证机构', '发证日期', '有效期')
+COMPANY_FIELDS = ('公司名称', '单位性质', '地址', '成立日期', '经营期限', '经营范围',
+                  '统一社会信用代码', '工商注册号', '纳税人识别号', '组织机构代码',
+                  '开户行', '单位账号', '电话', '传真', '网址', '上一年基本信息')
 
 
 class QualificationRepository:
@@ -15,6 +18,27 @@ class QualificationRepository:
         with runtime_connection(self.database_path) as connection:
             return [dict(row) for row in connection.execute(
                 'SELECT 公司ID,公司名称 FROM 公司信息表 ORDER BY 公司名称,公司ID')]
+
+    def company_info(self, company_id):
+        with runtime_connection(self.database_path) as connection:
+            row = connection.execute('SELECT * FROM 公司信息表 WHERE 公司ID=?',
+                                     (company_id,)).fetchone()
+            return dict(row) if row else None
+
+    def save_company(self, company_id, values):
+        parameters = tuple(values[field] for field in COMPANY_FIELDS)
+        with runtime_connection(self.database_path, write=True) as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            if company_id is None:
+                return connection.execute(
+                    'INSERT INTO 公司信息表(' + ','.join(COMPANY_FIELDS) + ') VALUES(' +
+                    ','.join('?' for _ in COMPANY_FIELDS) + ')', parameters).lastrowid
+            cursor = connection.execute(
+                'UPDATE 公司信息表 SET ' + ','.join(field + '=?' for field in COMPANY_FIELDS) +
+                ' WHERE 公司ID=?', (*parameters, company_id))
+            if cursor.rowcount != 1:
+                raise LookupError(f'公司 ID {company_id} 不存在')
+            return company_id
 
     def search(self, name='', grade='', company_id=None):
         conditions = ['Q.资质证书名称 LIKE ? ESCAPE \'\\\'', 'COALESCE(Q.资质等级,\'\') LIKE ? ESCAPE \'\\\'']

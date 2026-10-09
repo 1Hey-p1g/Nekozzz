@@ -92,7 +92,7 @@ class DataManagementTests(unittest.TestCase):
 
     def test_versions_are_independent_and_runtime_stays_v1(self):
         self.assertEqual('Nekozzz', APP_NAME)
-        self.assertEqual('0.9.2', APP_VERSION)
+        self.assertEqual('0.9.3', APP_VERSION)
         self.assertEqual(1, DB_SCHEMA_VERSION)
         self.assertEqual(1, BACKUP_FORMAT_VERSION)
         with runtime_connection(self.db) as connection:

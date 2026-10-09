@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 
 from gui.common import RowsModel, StyledComboBox, table_view
+from gui.company_info import CompanyInfoEditor
 from gui.project_attachments import ProjectAttachmentEditor
 from repositories.qualification_repository import QUALIFICATION_FIELDS
 from services.people import expiry_status
@@ -49,6 +50,8 @@ class QualificationManagePage(QWidget):
         scroll.setFrameShape(QScrollArea.NoFrame)
         detail = QWidget()
         dl = QVBoxLayout(detail)
+        self.company_info = CompanyInfoEditor(self.service, self.notify, self.company_saved)
+        dl.addWidget(self.company_info)
         self.state_label = QLabel('查看状态')
         self.state_label.setObjectName('stateLabel')
         dl.addWidget(self.state_label)
@@ -99,6 +102,7 @@ class QualificationManagePage(QWidget):
         self.cancel_button.clicked.connect(self.cancel)
         self.delete_button.clicked.connect(self.delete_qualification)
         self.attachments.pending_changed.connect(self.pending_changed)
+        self.company_info.editing_changed.connect(self.company_editing_changed)
         self.refresh_qualifications()
 
     def describe_group(self, group):
@@ -121,8 +125,22 @@ class QualificationManagePage(QWidget):
         self.delete_button.setEnabled(mode == 'view' and self.qualification_id is not None)
         self.new_button.setEnabled(mode == 'view')
         self.attachments.setEnabled(mode == 'view' and self.qualification_id is not None)
+        self.company_info.setEnabled(mode == 'view')
+
+    def company_editing_changed(self, editing):
+        for widget in (self.qualifications_view, self.search_input, self.new_button):
+            widget.setEnabled(not editing)
+        self.edit_button.setEnabled(not editing and self.qualification_id is not None)
+        self.delete_button.setEnabled(not editing and self.qualification_id is not None)
+        self.attachments.setEnabled(not editing and self.qualification_id is not None)
+
+    def company_saved(self):
+        target = self.company_info.company_id
+        self.refresh_qualifications()
+        self.company_info.reload(target)
 
     def pending_changed(self, pending):
+        self.company_info.setEnabled(not pending)
         self.qualifications_view.setEnabled(not pending)
         self.search_input.setEnabled(not pending)
         self.new_button.setEnabled(not pending and self.mode == 'view')
@@ -130,6 +148,8 @@ class QualificationManagePage(QWidget):
         self.delete_button.setEnabled(not pending and self.qualification_id is not None)
 
     def can_leave(self):
+        if not self.company_info.can_leave():
+            return False
         if not self.attachments.can_leave():
             return False
         return not self.dirty or QMessageBox.question(
@@ -140,6 +160,7 @@ class QualificationManagePage(QWidget):
         self.loading = True
         try:
             self.original = row
+            self.company_info.reload()
             self.company.clear()
             self.company.addItem('请选择所属公司', None)
             for company in self.service.qualifications.companies():
@@ -151,6 +172,14 @@ class QualificationManagePage(QWidget):
                 editor.setText('' if value is None else str(value))
             self.expiry_label.setText(expiry_status(row['有效期']) if row else '—')
             self.attachments.set_group((self.qualification_id,) if self.qualification_id is not None else None)
+        except Exception as error:
+            self.original = None
+            self.company.clear()
+            for editor in self.inputs.values():
+                editor.clear()
+            self.expiry_label.setText('—')
+            self.attachments.set_group(None)
+            self.error_label.setText(f'资料加载失败：{error}')
         finally:
             self.loading = False
 
@@ -169,6 +198,10 @@ class QualificationManagePage(QWidget):
                 self.qualification_id = self.model.rows[index]['资质ID']
             else:
                 self.qualification_id = None
+        except Exception as error:
+            self.model.set_rows([])
+            self.qualification_id = None
+            self.error_label.setText(f'资料加载失败：{error}')
         finally:
             self.loading = False
         self.load(self.service.qualifications.get(self.qualification_id) if self.qualification_id is not None else None)
@@ -189,6 +222,8 @@ class QualificationManagePage(QWidget):
             return
         self.qualification_id = target
         self.load(self.service.qualifications.get(target) if target is not None else None)
+        if self.original:
+            self.company_info.reload(self.original['公司ID'])
         self.set_mode('view')
 
     def search(self):

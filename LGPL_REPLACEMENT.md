@@ -1,4 +1,4 @@
-# LGPL replacement and source delivery — Nekozzz 0.9.2
+# LGPL replacement and source delivery — Nekozzz 0.9.3 RC
 
 Qt 6.11.2 Core/Gui/Widgets/UiTools/OpenGLWidgets/OpenGL/Svg are separate DLLs
 under _internal/PySide6. Binding .pyd files and pyside6.abi3.dll are there too;

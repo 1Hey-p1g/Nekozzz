@@ -13,6 +13,7 @@ from gui.common import CertificateTextDelegate, CheckBoxDelegate, ImagePreview, 
 from gui.person_word import PersonOrderList
 from services.project_word import ProjectWordJob, ProjectWordPreflightError, ProjectWordWriteError
 from services.word_service import WordNoActiveDocumentError, WordNotRunningError, WordServiceError
+from services.office_writer import writer_error_message
 
 
 class ProjectSearchPage(QWidget):
@@ -122,7 +123,7 @@ class ProjectSearchPage(QWidget):
         self.insert_name = QCheckBox('插入工程名称')
         bottom.addWidget(self.insert_name)
         bottom.addStretch()
-        self.output_button = QPushButton('插入到 Word')
+        self.output_button = QPushButton('插入资料')
         bottom.addWidget(self.output_button)
         layout.addLayout(bottom)
         self.error_label = QLabel()
@@ -376,14 +377,10 @@ class ProjectSearchPage(QWidget):
         try:
             plan = self.output_service.insert(self.job, self.settings_service.load(),
                 confirm_style_fallback=lambda missing: confirm_style_fallback(self, missing))
-        except WordNotRunningError:
-            self.error_label.setText('未检测到正在运行的 Microsoft Word，请先打开 Word 文档并将光标放到需要插入的位置。')
-        except WordNoActiveDocumentError:
-            self.error_label.setText('Microsoft Word 当前没有活动文档，请先打开目标文档。')
         except (ProjectWordPreflightError, ProjectWordWriteError, WordServiceError) as error:
-            self.error_label.setText(str(error))
+            self.error_label.setText(writer_error_message(error, self.settings_service.load().writer_target))
         except Exception as error:
-            self.error_label.setText(f'Word 输出失败：{error}')
+            self.error_label.setText('文档输出失败：' + writer_error_message(error, self.settings_service.load().writer_target))
         else:
             self.error_label.clear()
             self.notify(f'已插入 {len(plan.blocks)} 项工程，共 {plan.image_count} 张附件图片')

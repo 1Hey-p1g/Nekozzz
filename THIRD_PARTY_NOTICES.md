@@ -1,7 +1,7 @@
-# Third-party notices — FINAL Nekozzz 0.9.2 accepted runtime
+# Third-party notices — Nekozzz 0.9.3 RC runtime
 
 Copyright © 2026 1Hey-p1g. Nekozzz is **AGPL-3.0-only**; root LICENSE is its full text.
-This table describes the accepted RC, not historical inventories. It does not
+This table describes the verified 0.9.3 RC runtime, not historical inventories. It does not
 relicense upstream code. See SOURCE_AVAILABILITY.md and the final release clearance
 report for source-delivery preparation and the manual publication steps.
 
@@ -78,7 +78,7 @@ Microsoft Visual C++ v14 **x64** Runtime must be sufficiently recent on Windows
 10/11. Install from Microsoft's official documentation if missing:
 https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist
 Nekozzz supplies neither VC DLLs nor vc_redist installer. Desktop Microsoft Word
-is required for Word integration; a compatible 64-bit Access ODBC driver is
+or WPS Writer is required for document insertion; a compatible 64-bit Access ODBC driver is
 required only for Access migration. No Microsoft redistribution entitlement
 is claimed for these external products.
 

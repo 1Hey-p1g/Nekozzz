@@ -246,9 +246,13 @@ class DataManagementController:
             info = run_operation(self.window, lambda: self.service.backups.inspect_backup(path), '正在验证备份，请稍候…')
             manifest = info.manifest
             settings_text = '恢复备份中的设置' if manifest['includes_settings'] else '未包含设置，保留当前设置'
+            attachment_warning = (f'注意：备份中有 {len(info.missing_images)} 个附件引用缺少实体文件；恢复后仍会缺失。\n'
+                                  if info.missing_images else '')
             if QMessageBox.question(self.window, '确认恢复完整备份',
                 f'备份时间：{manifest["created_at"]}\n创建版本：{manifest["app_version"]}\n'
                 f'数据库版本：{manifest["database_version"]}\nImages：完整包含\nSettings：{settings_text}\n\n'
+                '备份格式与数据库结构校验已通过；创建时的应用版本无需与当前版本相同。\n'
+                + attachment_warning +
                 '恢复将替换当前 Nekozzz 数据库、Images 和设置（未包含设置时保留当前设置）。\n'
                 '恢复前会自动创建 Safety Backup。成功后程序退出，请重新启动。',
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:

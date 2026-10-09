@@ -1,29 +1,55 @@
 # Nekozzz
 
-摸鱼也要做标书
+### 🐈 摸鱼也要做标书
 
-Nekozzz 0.9.2 是一个 Windows 桌面应用，用于管理投标／标书相关资料和文档工作流。
-这是个人开源项目，主要面向离线使用，资料保存在本地。
+没什么特别的程序，主要是减少重复劳动，让我上班有更多时间摸鱼。
+
+标书可以一份接一份，重复劳动就没必要一遍接一遍了。
+
+**Nekozzz** 是一个用 Python、PySide6 和 SQLite 开发的 Windows 桌面标书辅助工具。它不负责帮你中标，只负责让你少找几份文件、少复制几次资料、少往 Word 里塞几张图片。
+
+项目最初只是为了让自己做标书时能省点事，后来功能越写越多，索性开源分享。
+
+**毕竟，摸鱼的前提是先把活干完。**
+
+Nekozzz 主要面向离线使用，业务资料保存在本地，没有联网功能。
+
+## What's New in v0.9.3
+
+发布准备中，尚未正式发布。
+
+**新功能**
+
+- 公司基本信息能看、能选字复制，也能在资质管理中编辑保存。
+- 这次不只认 Word 了：设置中可选 Microsoft Word 或 WPS Writer，资料插入和人员 AutoFill 共用原有流程，保留 Word 功能。
+
+**改进**
+
+- 明确备份兼容性由备份格式与数据库结构决定，应用版本只标记来源；加强完整性、附件路径和解压校验，保留兼容的 v0.9.2 备份支持。
+
+**已知差异**
+
+- WPS Writer 与 Microsoft Word 的排版引擎存在差异，部分窄列表格可能出现不同的文字换行结果。
 
 ## 功能
 
 - 人员及人员证书管理、多人资料选择
-- 公司资质管理
+- 公司资质管理、公司基本信息查看／复制／编辑
 - 工程业绩及项目管理人员管理、多项目资料选择
 - 获奖及财务资料管理
 - PDF 附件导入、图片预览与管理
-- Microsoft Word 资料输出
+- Microsoft Word／WPS Writer 可选目标资料输出
 - 实验性人员自动填表（experimental feature）
 
-技术栈：Python、PySide6、SQLite。Word 集成目前面向桌面版 Microsoft Word，
-不保证 WPS 兼容性。Access 迁移需要匹配的 Windows Access ODBC 驱动。
-Microsoft Word 和 Access 驱动不随软件分发。
+技术栈：Python、PySide6、SQLite。文档插入目标可在设置中选择 Microsoft Word 或 WPS Writer；
+请先打开所选程序及文档，不会自动启动或切换目标。Access 迁移需要匹配的 Windows Access ODBC 驱动。
+Microsoft Word、WPS Writer 和 Access 驱动不随软件分发。
 
 ## Windows prerequisites
 
 Windows 10/11 x64；运行前需要足够新的 Microsoft Visual C++ v14 x64 Runtime。
 缺失时请从 [Microsoft 官方下载说明](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)安装 x64 版本。
-Nekozzz 不携带 VC DLL 或安装器，也不自动下载/安装。Word 输出需要桌面版 Microsoft Word。
+Nekozzz 不携带 VC DLL 或安装器，也不自动下载/安装。文档输出需要桌面版 Microsoft Word 或 WPS Writer。
 正式 XML 后端为 Python 标准库；openpyxl 使用自己的 ElementTree/et_xmlfile fallback。
 Qt 图片支持边界为 PNG/JPEG/ICO/SVG；不保证 GIF/WebP/TIFF/ICNS/TGA/WBMP。
 
@@ -63,7 +89,7 @@ Copyright © 2026 1Hey-p1g
 
 Windows binary 发布前必须提供该发行包的对应源码，而不是只链接最新版源码。
 源码与第三方 copyleft 组件交付计划见 [SOURCE_AVAILABILITY.md](SOURCE_AVAILABILITY.md)。
-当前验收 RC 的行为已通过开发者人工验收。发行合规结论为 **B. READY EXCEPT FOR MANUAL PUBLICATION**：对应源码及手工发布步骤见 [最终发行报告](NEKOZZZ_0.9.2_FINAL_RELEASE_CLEARANCE.md)。旧报告描述历史发行包，不代表当前运行边界。
+v0.9.2 验收 RC 的行为已通过开发者人工验收，其发行合规结论为 **B. READY EXCEPT FOR MANUAL PUBLICATION**，见 [v0.9.2 最终发行报告](NEKOZZZ_0.9.2_FINAL_RELEASE_CLEARANCE.md)。该结论仅适用于 v0.9.2。v0.9.3 RC1 的完整业务、Word/WPS、公司基本信息、备份恢复及 Access 迁移已由开发者人工验收通过；历史 Access 自动测试夹具仍缺失，不代表全量自动测试通过。当前仍需核对 Git 对应提交、上传 Draft 及确认对应源码下载访问，公开发布须另行确认，见 [v0.9.3 审计报告](NEKOZZZ_0.9.3_RELEASE_AUDIT.md)。
 
 ## Development
 

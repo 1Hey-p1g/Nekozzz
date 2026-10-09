@@ -12,6 +12,7 @@ from services.autofill.person_task import PersonAutoFillTask
 from services.autofill.person_service import AutoFillWriteError
 from services.person_word import PersonWordPreflightError
 from services.word_service import WordNotRunningError, WordNoActiveDocumentError, WordServiceError
+from services.office_writer import writer_error_message
 
 
 class PersonAutoFillPage(QWidget):
@@ -116,7 +117,7 @@ class PersonAutoFillPage(QWidget):
         root.addWidget(split, 1)
         buttons = QHBoxLayout()
         clear = QPushButton('清空任务')
-        self.output_button = QPushButton('输出到 Word（实验性）')
+        self.output_button = QPushButton('输出资料（实验性）')
         buttons.addWidget(clear)
         buttons.addStretch()
         buttons.addWidget(self.output_button)
@@ -219,11 +220,7 @@ class PersonAutoFillPage(QWidget):
             plan = self.output_service.insert(self.task, self.settings_service.load(),
                 confirm_style_fallback=lambda missing: confirm_style_fallback(self, missing))
             self.notify(f'已输出 {len(self.task.people)} 人，{len(plan.blocks)} 张表，{plan.image_count} 张附件图片')
-        except WordNotRunningError:
-            QMessageBox.warning(self, 'Word 未运行', '请先打开 Microsoft Word 文档并放置光标。')
-        except WordNoActiveDocumentError:
-            QMessageBox.warning(self, '没有活动文档', 'Microsoft Word 当前没有活动文档。')
         except (ValueError, OSError, PersonWordPreflightError, AutoFillWriteError, WordServiceError) as error:
-            QMessageBox.warning(self, '自动填表未完成', str(error))
+            QMessageBox.warning(self, '自动填表未完成', writer_error_message(error, self.settings_service.load().writer_target))
         finally:
             self.output_button.setEnabled(True)

@@ -37,6 +37,7 @@ class CertificateOrderList(QListWidget):
 
 class SettingsPage(QWidget):
     theme_changed = Signal(str)
+    writer_target_changed = Signal(str)
     def __init__(self, settings_service, notify, certificate_types=None, project_types=None,
                  qualification_names=None, *, data_management=None):
         super().__init__()
@@ -137,16 +138,22 @@ class SettingsPage(QWidget):
         self.color.setFixedWidth(126)
         self._setting_row(pdf.layout(), "颜色模式", "彩色或灰度整页渲染。", self.color)
 
-        word = self._card("Word 插入")
+        word = self._card("文档插入")
         column_layout.addWidget(word)
+        self.writer_target = StyledComboBox()
+        self.writer_target.setObjectName('officeWriterTarget')
+        self.writer_target.addItem('Microsoft Word', 'word')
+        self.writer_target.addItem('WPS Writer', 'wps')
+        self._setting_row(word.layout(), '插入目标', '所有资料插入共用此目标；请先打开目标程序和文档。不会自动启动或切换程序。', self.writer_target)
+        self.writer_target.currentIndexChanged.connect(self._save_writer_target)
         self.image_style = QLineEdit()
         self.image_style.setObjectName("wordImageStyle")
         self.image_style.setMaximumWidth(300)
-        self._setting_row(word.layout(), "图片样式", "输入目标 Word 文档中的图片段落样式名称。", self.image_style)
+        self._setting_row(word.layout(), "图片样式", "输入目标文档中的图片段落样式名称。", self.image_style)
         self.person_name_style = QLineEdit()
         self.person_name_style.setObjectName("wordPersonNameStyle")
         self.person_name_style.setMaximumWidth(300)
-        self._setting_row(word.layout(), "文本样式", "输入目标 Word 文档中的姓名、工程名称等文本段落样式名称。", self.person_name_style)
+        self._setting_row(word.layout(), "文本样式", "输入目标文档中的姓名、工程名称等文本段落样式名称。", self.person_name_style)
         self.shrink_images = QCheckBox("超宽图片自适应缩小")
         self.shrink_images.setObjectName("wordShrinkImages")
         word.layout().addWidget(self.shrink_images)
@@ -311,13 +318,14 @@ class SettingsPage(QWidget):
 
     def show_settings(self, settings):
         """Display persisted values without triggering an immediate save."""
-        controls = (self.theme, self.dpi, self.quality, self.color, self.image_style,
+        controls = (self.theme, self.writer_target, self.dpi, self.quality, self.color, self.image_style,
                     self.person_name_style, self.shrink_images, self.enlarge_images,
                     self.certificate_order, self.project_order, self.qualification_order,
                     self.autofill_title_style, self.autofill_note_style, self.autofill_person_name_style)
         previous = [control.blockSignals(True) for control in controls]
         try:
             self.theme.setCurrentIndex(('system', 'light', 'dark').index(settings.theme))
+            self.writer_target.setCurrentIndex(self.writer_target.findData(settings.writer_target))
             self.dpi.setCurrentIndex(self.dpi.findData(settings.dpi))
             self.quality.setValue(QUALITY_VALUES.index(settings.jpeg_quality))
             self.color.setCurrentText(settings.color_mode)
@@ -387,6 +395,11 @@ class SettingsPage(QWidget):
         )
         self._persist(settings, refresh=True)
 
+    def _save_writer_target(self, *_):
+        target = self.writer_target.currentData()
+        self._persist(replace(self.settings_service.load(), writer_target=target))
+        self.writer_target_changed.emit(self.settings_service.load().writer_target)
+
     def _persist(self, settings, *, refresh=False):
         try:
             self.settings_service.save(settings)
@@ -419,5 +432,6 @@ class SettingsPage(QWidget):
             return
         self.show_settings(defaults)
         self.theme_changed.emit(defaults.theme)
+        self.writer_target_changed.emit(defaults.writer_target)
         self.error_label.clear()
         self.notify("已恢复默认设置")

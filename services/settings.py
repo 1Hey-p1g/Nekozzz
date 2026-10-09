@@ -27,6 +27,7 @@ class PdfSettings:
     autofill_title_style: str = ''
     autofill_note_style: str = ''
     autofill_person_name_style: str = ''
+    writer_target: str = 'word'
 
     def normalized(self):
         if not isinstance(self.image_style, str) or not isinstance(self.person_name_style, str):
@@ -63,6 +64,8 @@ class PdfSettings:
         )
 
     def validate(self):
+        if self.writer_target not in ('word', 'wps'):
+            raise ValueError('文档插入目标必须为 Microsoft Word 或 WPS Writer')
         if self.theme not in ('system', 'light', 'dark'):
             raise ValueError('Theme must be system, light or dark')
         if type(self.dpi) is not int or self.dpi not in (150, 200, 300):

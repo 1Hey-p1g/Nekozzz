@@ -8,10 +8,12 @@ from PySide6.QtWidgets import (
 )
 
 from gui.common import CertificateTextDelegate, CheckBoxDelegate, ImagePreview, RowsModel, StyledComboBox, table_view
+from gui.company_info import CompanyInfoView
 from gui.word_styles import confirm_style_fallback
 from services.people import expiry_status
 from services.qualification_word import QualificationWordPreflightError, QualificationWordWriteError
 from services.word_service import WordNoActiveDocumentError, WordNotRunningError, WordServiceError
+from services.office_writer import writer_error_message
 
 
 class QualificationSearchPage(QWidget):
@@ -22,6 +24,7 @@ class QualificationSearchPage(QWidget):
         self.copy_to_clipboard = copy_to_clipboard or QGuiApplication.clipboard().setText
         self.selected_ids = set()
         self.current_qualification_id = None
+        self.company_list_available = True
         layout = QVBoxLayout(self)
         layout.setContentsMargins(26, 22, 26, 22)
         title = QLabel('公司资质搜索与选择')
@@ -58,7 +61,13 @@ class QualificationSearchPage(QWidget):
         self.qualifications_view.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         for column, width in ((0, 55), (2, 70), (3, 100), (4, 100), (5, 120)):
             self.qualifications_view.setColumnWidth(column, width)
-        split.addWidget(self.qualifications_view)
+        left = QWidget()
+        left_layout = QVBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        self.company_info = CompanyInfoView()
+        left_layout.addWidget(self.company_info)
+        left_layout.addWidget(self.qualifications_view, 1)
+        split.addWidget(left)
         right = QWidget()
         rl = QVBoxLayout(right)
         rl.setContentsMargins(8, 0, 0, 0)
@@ -88,7 +97,7 @@ class QualificationSearchPage(QWidget):
         actions = QHBoxLayout()
         self.selected_count = QLabel()
         self.clear_selection_button = QPushButton('清空本次选择')
-        self.output_button = QPushButton('插入到 Word')
+        self.output_button = QPushButton('插入资料')
         actions.addWidget(self.selected_count)
         actions.addWidget(self.clear_selection_button)
         self.insert_name = QCheckBox('插入资质证书名称')
@@ -111,25 +120,52 @@ class QualificationSearchPage(QWidget):
         self.attachments_view.selectionModel().currentRowChanged.connect(self.attachment_changed)
         self.clear_selection_button.clicked.connect(self.clear_selection)
         self.output_button.clicked.connect(self.insert_to_word)
+        self.company.currentIndexChanged.connect(self.refresh_company_info)
         self.refresh_companies()
         self.search()
         self.update_count()
 
     def refresh_companies(self):
         selected = self.company.currentData()
-        self.company.clear()
-        self.company.addItem('全部公司', None)
-        for company in self.service.qualifications.companies():
-            self.company.addItem(f"{company['公司名称']}（ID {company['公司ID']}）", company['公司ID'])
-        self.company.setCurrentIndex(max(0, self.company.findData(selected)))
+        self.company.blockSignals(True)
+        try:
+            self.company.clear()
+            self.company.addItem('全部公司', None)
+            for company in self.service.qualifications.companies():
+                self.company.addItem(f"{company['公司名称']}（ID {company['公司ID']}）", company['公司ID'])
+            self.company.setCurrentIndex(max(0, self.company.findData(selected)))
+            self.company_list_available = True
+        except Exception as error:
+            self.company_list_available = False
+            self.company_info.display(None)
+            self.error_label.setText(f'公司列表加载失败：{error}')
+        finally:
+            self.company.blockSignals(False)
+        self.refresh_company_info()
+
+    def refresh_company_info(self, *_):
+        self.company_info.display(None)
+        if not self.company_list_available:
+            return
+        company_id = self.company.currentData()
+        try:
+            if company_id is None:
+                row = self.service.qualifications.get(self.current_qualification_id) if self.current_qualification_id is not None else None
+                company_id = row['公司ID'] if row else (self.company.itemData(1) if self.company.count() == 2 else None)
+            self.company_info.display(self.service.qualifications.company_info(company_id) if company_id is not None else None)
+        except Exception as error:
+            self.error_label.setText(f'公司信息加载失败：{error}')
 
     def search(self):
         try:
             rows = self.service.search(name=self.name_input.text(), grade=self.grade_input.text(),
                                        company_id=self.company.currentData(), status=self.status.currentData())
         except Exception as error:
+            self.company_info.display(None)
             self.error_label.setText(f'搜索失败：{error}')
             return
+        if self.company_list_available:
+            self.error_label.clear()
         selected = self.current_qualification_id
         self.model.set_rows(rows)
         self.model.set_active_id(None)
@@ -140,7 +176,6 @@ class QualificationSearchPage(QWidget):
         else:
             self.clear_preview()
         self.update_count()
-        self.error_label.clear()
 
     def clear_search(self):
         self.name_input.clear()
@@ -161,6 +196,7 @@ class QualificationSearchPage(QWidget):
 
     def clear_preview(self):
         self.current_qualification_id = None
+        self.refresh_company_info()
         self.summary.setPlainText('选择公司资质以查看基本资料')
         self.current_label.setText('选择资质以查看附件')
         self.attachment_model.set_rows([])
@@ -174,6 +210,7 @@ class QualificationSearchPage(QWidget):
             self.clear_preview()
             return
         self.current_qualification_id = row['资质ID']
+        self.refresh_company_info()
         self.model.set_active_id(self.current_qualification_id)
         fields = ('公司名称', '资质证书名称', '资质等级', '发证机构', '发证日期', '有效期')
         lines = [f"{field}：{row[field] if row[field] not in (None, '') else '—'}" for field in fields]
@@ -207,14 +244,10 @@ class QualificationSearchPage(QWidget):
             plan = self.output_service.insert(self.selected_ids, self.settings_service.load(),
                 insert_qualification_name=self.insert_name.isChecked(),
                 confirm_style_fallback=lambda missing: confirm_style_fallback(self, missing))
-        except WordNotRunningError:
-            self.error_label.setText('未检测到正在运行的 Microsoft Word，请先打开 Word 文档并将光标放到需要插入的位置。')
-        except WordNoActiveDocumentError:
-            self.error_label.setText('Microsoft Word 当前没有活动文档，请先打开目标文档。')
         except (QualificationWordPreflightError, QualificationWordWriteError, WordServiceError) as error:
-            self.error_label.setText(str(error))
+            self.error_label.setText(writer_error_message(error, self.settings_service.load().writer_target))
         except Exception as error:
-            self.error_label.setText(f'Word 输出失败：{error}')
+            self.error_label.setText('文档输出失败：' + writer_error_message(error, self.settings_service.load().writer_target))
         else:
             self.error_label.clear()
             self.notify(f'已插入 {len(plan.blocks)} 项公司资质，共 {plan.image_count} 张附件图片')

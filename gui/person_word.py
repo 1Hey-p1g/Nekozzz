@@ -14,6 +14,7 @@ from gui.common import (
 )
 from services.person_word import PersonWordJob, PersonWordPreflightError, PersonWordWriteError
 from services.word_service import WordNoActiveDocumentError, WordNotRunningError, WordServiceError
+from services.office_writer import writer_error_message
 
 
 class PersonOrderList(QListWidget):
@@ -59,7 +60,7 @@ class PersonWordPage(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(26, 22, 26, 22)
         root.setSpacing(12)
-        title = QLabel("多人 Word 输出")
+        title = QLabel("多人资料输出")
         title.setObjectName("pageTitle")
         title.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         root.addWidget(title)
@@ -137,7 +138,7 @@ class PersonWordPage(QWidget):
         self.insert_name = QCheckBox("插入人员姓名")
         bottom.addWidget(self.insert_name)
         bottom.addStretch()
-        self.output_button = QPushButton("插入到 Word")
+        self.output_button = QPushButton("插入资料")
         self.output_button.setObjectName("personWordInsert")
         bottom.addWidget(self.output_button)
         root.addLayout(bottom)
@@ -329,12 +330,8 @@ class PersonWordPage(QWidget):
         try:
             plan = self.output_service.insert(self.job, self.settings_service.load(),
                 confirm_style_fallback=lambda missing: confirm_style_fallback(self, missing))
-        except WordNotRunningError:
-            message = "未检测到正在运行的 Microsoft Word，请先打开 Word 文档并将光标放到需要插入的位置。"
-        except WordNoActiveDocumentError:
-            message = "Microsoft Word 当前没有活动文档，请先打开目标文档。"
         except (PersonWordPreflightError, PersonWordWriteError, WordServiceError) as error:
-            message = str(error)
+            message = writer_error_message(error, self.settings_service.load().writer_target)
         else:
             self.error_label.clear()
             self.notify(f"已插入 {len(plan.blocks)} 名人员，共 {plan.image_count} 张证书附件图片")

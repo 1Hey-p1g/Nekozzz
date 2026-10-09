@@ -1,4 +1,4 @@
-# Nekozzz 0.9.2 — Corresponding Source build / generation companion
+# Nekozzz 0.9.3 RC — Corresponding Source build / generation companion
 
 ## Scope and conclusion
 
@@ -52,19 +52,18 @@ Extract the four archives with their original directories. In an x64 developer
 shell, choose an empty install prefix and separate build directories, e.g.:
 
 ```powershell
-$qtPrefix = 'C:
-ecipient-buildqt-6.11.2'
-cmake -S .qtbase-everywhere-src-6.11.2 -B .uild-qtbase -G Ninja `
+$qtPrefix = 'C:\recipient-build\qt-6.11.2'
+cmake -S .\qtbase-everywhere-src-6.11.2 -B .uild-qtbase -G Ninja `
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$qtPrefix `
   -DBUILD_SHARED_LIBS=ON -DQT_BUILD_TESTS=OFF -DQT_BUILD_EXAMPLES=OFF
 cmake --build .uild-qtbase
 cmake --install .uild-qtbase
-cmake -S .qttools-everywhere-src-6.11.2 -B .uild-qttools -G Ninja `
+cmake -S .\qttools-everywhere-src-6.11.2 -B .uild-qttools -G Ninja `
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$qtPrefix `
   -DCMAKE_INSTALL_PREFIX=$qtPrefix -DQT_BUILD_TESTS=OFF -DQT_BUILD_EXAMPLES=OFF
 cmake --build .uild-qttools
 cmake --install .uild-qttools
-cmake -S .qtsvg-everywhere-src-6.11.2 -B .uild-qtsvg -G Ninja `
+cmake -S .\qtsvg-everywhere-src-6.11.2 -B .uild-qtsvg -G Ninja `
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$qtPrefix `
   -DCMAKE_INSTALL_PREFIX=$qtPrefix -DQT_BUILD_TESTS=OFF -DQT_BUILD_EXAMPLES=OFF
 cmake --build .uild-qtsvg
@@ -86,7 +85,7 @@ this does not add them to the frozen Nekozzz release boundary.
 In a separate Python build environment with upstream requirements available:
 
 ```powershell
-Set-Location .pyside-setup-everywhere-src-6.11.2
+Set-Location .\pyside-setup-everywhere-src-6.11.2
 python setup.py build --build-type=all --ignore-git --limited-api=yes `
   --module-subset=Core,Gui,Widgets,UiTools,OpenGL,OpenGLWidgets `
   --qtpaths="$qtPrefixinqtpaths6.exe"
@@ -159,8 +158,8 @@ PyMuPDF sdist or exact Git archive with identical source layout and local MuPDF:
 
 ```powershell
 # In a recipient-owned build environment with dependencies already available:
-Set-Location .pymupdf-1.28.2
-$env:PYMUPDF_SETUP_MUPDF_BUILD = (Resolve-Path '..mupdf-1.28.2-source').Path
+Set-Location .\pymupdf-1.28.2
+$env:PYMUPDF_SETUP_MUPDF_BUILD = (Resolve-Path '..\mupdf-1.28.2-source').Path
 $env:PYMUPDF_SETUP_MUPDF_BUILD_TYPE = 'release'
 $env:PYMUPDF_SETUP_MUPDF_TESSERACT = '1'
 $env:PYMUPDF_SETUP_MUPDF_OVERWRITE_CONFIG = '1'

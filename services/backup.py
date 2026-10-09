@@ -19,15 +19,20 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
-from config.paths import DATA_ROOT
+from config.paths import DATA_ROOT, resolve_image_path
 from database.initializer import publish_staging
 from database.runtime import runtime_connection, runtime_maintenance, validate_runtime_path
 from migration.migration_validator import validate_target_structure
+from migration.target_schema import IMAGE_GROUPS
 from version import APP_NAME, APP_VERSION, DB_SCHEMA_VERSION, BACKUP_FORMAT_VERSION
 
 
 DATABASE_ENTRY = 'database/tender.db'
 SETTINGS_ENTRY = 'config/settings.json'
+# Resource ceilings, checked before extraction (not a change to Backup V1).
+MAX_ARCHIVE_ENTRIES = 100_000
+MAX_MEMBER_BYTES = 8 * 1024 ** 3
+MAX_EXTRACTED_BYTES = 32 * 1024 ** 3
 
 
 class BackupValidationError(ValueError):
@@ -46,6 +51,7 @@ class RestoreRecoveryRequiredError(RestoreError):
 class BackupInfo:
     manifest: dict
     sha256: str
+    missing_images: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -90,6 +96,22 @@ def _validate_database(path):
         validate_target_structure(connection)
         if connection.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
             raise BackupValidationError('备份 SQLite 完整性检查失败')
+
+
+def _validate_attachment_paths(database, data_root):
+    missing = set()
+    with closing(sqlite3.connect(Path(database).resolve().as_uri() + '?mode=ro', uri=True)) as connection:
+        for table in IMAGE_GROUPS:
+            for (value,) in connection.execute(f'SELECT "路径" FROM "{table}"'):
+                if value in (None, ''):
+                    continue
+                try:
+                    path = resolve_image_path(value, data_root=data_root)
+                except (TypeError, ValueError) as error:
+                    raise BackupValidationError(f'备份附件引用路径不安全：{value!r}') from error
+                if not path.is_file():
+                    missing.add(value)
+    return tuple(sorted(missing))
 
 
 def _member_path(info):
@@ -175,6 +197,12 @@ class BackupService:
         try:
             with zipfile.ZipFile(archive_path) as archive:
                 entries = archive.infolist()
+                if len(entries) > MAX_ARCHIVE_ENTRIES:
+                    raise BackupValidationError('备份文件数量超过安全上限')
+                if any(entry.file_size > MAX_MEMBER_BYTES for entry in entries):
+                    raise BackupValidationError('备份单文件大小超过安全上限')
+                if sum(entry.file_size for entry in entries) > MAX_EXTRACTED_BYTES:
+                    raise BackupValidationError('备份解压总大小超过安全上限')
                 seen = set()
                 for entry in entries:
                     _member_path(entry)
@@ -201,18 +229,18 @@ class BackupService:
                         path.parent.mkdir(parents=True, exist_ok=True)
                         with archive.open(entry) as source, path.open('xb') as output:
                             shutil.copyfileobj(source, output)
-                inventory = manifest.get('files')
-                if inventory is not None:
-                    payload = set(members) - {'backup.json'}
-                    if not isinstance(inventory, dict) or set(inventory) != payload:
-                        raise BackupValidationError('备份文件校验清单不完整')
-                    for name, digest in inventory.items():
-                        if not isinstance(digest, str) or digest != _digest(staging / name):
-                            raise BackupValidationError(f'备份文件校验失败：{name}')
                 _validate_database(staging / DATABASE_ENTRY)
+                inventory = manifest.get('files')
+                payload = set(members) - {'backup.json'}
+                if not isinstance(inventory, dict) or set(inventory) != payload:
+                    raise BackupValidationError('备份文件校验清单缺失或不完整')
+                for name, digest in inventory.items():
+                    if not isinstance(digest, str) or digest != _digest(staging / name):
+                        raise BackupValidationError(f'备份文件校验失败：{name}')
+                missing_images = _validate_attachment_paths(staging / DATABASE_ENTRY, staging)
             if _digest(archive_path) != before:
                 raise BackupValidationError('备份文件在验证期间发生变化')
-            return BackupInfo(manifest, before)
+            return BackupInfo(manifest, before, missing_images)
         except (zipfile.BadZipFile, sqlite3.Error, KeyError, TypeError, UnicodeError, ValueError) as error:
             if isinstance(error, BackupValidationError):
                 raise
@@ -224,7 +252,9 @@ class BackupService:
             raise BackupValidationError('备份应用名称不匹配')
         for field, supported in (('format_version', BACKUP_FORMAT_VERSION), ('database_version', DB_SCHEMA_VERSION)):
             if type(manifest.get(field)) is not int or manifest[field] != supported:
-                raise BackupValidationError(f'不支持的 {field}：{manifest.get(field)!r}')
+                label = '备份格式版本' if field == 'format_version' else '数据库结构版本'
+                raise BackupValidationError(f'不支持的{label}：{manifest.get(field)!r}；当前支持 {supported}，没有自动迁移路径')
+        # app_version is provenance, never a compatibility gate.
         if not isinstance(manifest.get('app_version'), str) or not manifest['app_version'].strip():
             raise BackupValidationError('备份缺少应用版本')
         created = datetime.fromisoformat(manifest.get('created_at', ''))
@@ -293,6 +323,8 @@ class BackupService:
                             os.replace(prepared, target)
                             journal[-1][4] = True
                     _validate_database(self.database_path)
+                    if _validate_attachment_paths(self.database_path, self.data_root) != info.missing_images:
+                        raise RestoreError('恢复后附件引用状态与已验证备份不一致')
                 except BaseException as error:
                     rollback_errors = []
                     for target, old, existed, moved, installed in reversed(journal):

@@ -1,5 +1,5 @@
 {
-  "application": "source/ (current production source view, file hashes in application_source_manifest.json)",
+  "application": "source/ (0.9.3 RC build inputs; APPLICATION_SOURCE_MANIFEST.json)",
   "upstream_archives": [
     {
       "filename": "Python-3.14.7.tar.xz",
@@ -81,15 +81,16 @@
     "universal hardware testing"
   ],
   "publication": "Only manual publication remains: upload same-release immutable application/library source and source companions alongside unchanged binary, fill real download URLs, verify recipient access and SHA256. No publication performed.",
-  "closure_classification": "B. READY EXCEPT FOR MANUAL PUBLICATION",
+  "closure_classification": "Technical library source-companion evidence reused only after unchanged native/archive hash verification; overall RC decision in 0.9.3 audit",
   "build_companion": {
     "file": "CORRESPONDING_SOURCE_BUILD_GUIDE.md",
-    "sha256": "13ad99901a269deb9568f8e5e7c83787607aca3118e5e8ab95b932f50ec27ba8",
+    "sha256": "8029df9e03328596b6afdbd4c2c2285b7dd264167c39cb633aa49bf851ae44e5",
     "executed": false,
     "qt_binding_input_files_matched": 131,
     "qt_native_record_files_matched": 22,
     "qt_status": "complete practical shared-library/generator source and replacement route",
     "mupdf_status": "complete source and documented automatic regeneration route; SWIG 4.4.1"
   },
-  "office_metadata": "Developer decision A: approve existing Office creator/lastModifiedBy and local-directory disclosure; resources unchanged."
+  "office_metadata": "Developer decision A: approve existing Office creator/lastModifiedBy and local-directory disclosure; resources unchanged.",
+  "binary_sha256": "84c2240bff1b8e5003989592e1df4524cadf13c579d2bc98c41066654a868823"
 }

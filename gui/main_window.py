@@ -22,6 +22,7 @@ from services.projects import ProjectService
 from services.project_word import ProjectWordOutputService
 from services.person_word import PersonWordOutputService
 from services.settings import SettingsService
+from services.office_writer import OfficeWriterConnector, writer_name
 from services.attachments import CertificateAttachmentService, ProjectAttachmentService
 from services.attachments import QualificationAttachmentService
 from services.qualifications import QualificationService
@@ -112,11 +113,12 @@ def build_main_window(service, database_path, *, settings_service=None, attachme
     toast = CopyToast(stack)
     search_page = PersonSearchPage(service, copy_to_clipboard=toast.copy)
     settings_service = settings_service or SettingsService()
+    writer_factory = OfficeWriterConnector(settings_service)
     multi_page = PersonWordPage(
-        service, person_word_service or PersonWordOutputService(service),
+        service, person_word_service or PersonWordOutputService(service, word_factory=writer_factory),
         settings_service, toast.show_message, copy_to_clipboard=toast.copy,
     )
-    autofill_page = PersonAutoFillPage(service, PersonAutoFillService(service), settings_service, toast.show_message)
+    autofill_page = PersonAutoFillPage(service, PersonAutoFillService(service, word_factory=writer_factory), settings_service, toast.show_message)
     stack.addWidget(autofill_page)
     window.person_autofill_page = autofill_page
     manage_page = PersonManagePage(
@@ -131,7 +133,7 @@ def build_main_window(service, database_path, *, settings_service=None, attachme
         notify=toast.show_message,
     )
     project_search_page = ProjectSearchPage(
-        project_service, project_word_service or ProjectWordOutputService(project_service.projects),
+        project_service, project_word_service or ProjectWordOutputService(project_service.projects, word_factory=writer_factory),
         settings_service, toast.show_message, copy_to_clipboard=toast.copy,
     )
     qualification_service = qualification_service or QualificationService(database_path)
@@ -141,16 +143,16 @@ def build_main_window(service, database_path, *, settings_service=None, attachme
         notify=toast.show_message,
     )
     qualification_search_page = QualificationSearchPage(
-        qualification_service, qualification_word_service or QualificationWordOutputService(qualification_service.qualifications),
+        qualification_service, qualification_word_service or QualificationWordOutputService(qualification_service.qualifications, word_factory=writer_factory),
         settings_service, toast.show_message, copy_to_clipboard=toast.copy,
     )
     award_service = award_service or AwardService(database_path)
     finance_service = finance_service or FinanceService(database_path)
     award_search_page = ReportSearchPage(
-        award_service, award_word_service or ReportWordOutputService(award_service.repository),
+        award_service, award_word_service or ReportWordOutputService(award_service.repository, word_factory=writer_factory),
         settings_service, toast.show_message, copy_to_clipboard=toast.copy)
     finance_search_page = ReportSearchPage(
-        finance_service, finance_word_service or ReportWordOutputService(finance_service.repository),
+        finance_service, finance_word_service or ReportWordOutputService(finance_service.repository, word_factory=writer_factory),
         settings_service, toast.show_message, copy_to_clipboard=toast.copy)
     award_manage_page = ReportManagePage(
         award_service, settings_service=settings_service,
@@ -217,6 +219,7 @@ def build_main_window(service, database_path, *, settings_service=None, attachme
         row.setSpacing(8)
         single = QPushButton("单人选择")
         multiple = QPushButton("多人 Word 输出")
+        multiple.setToolTip('使用设置中选择的 Microsoft Word 或 WPS Writer')
         for button in (single, multiple):
             button.setCheckable(True)
             button.setObjectName("personModeButton")
@@ -306,7 +309,10 @@ def build_main_window(service, database_path, *, settings_service=None, attachme
     settings_page.theme_changed.connect(app.theme_manager.apply)
     app.theme_manager.apply(settings_service.load().theme)
     window.setWindowTitle(f'{APP_NAME} {APP_VERSION} · 投标资料工作台')
-    window.statusBar().showMessage(f"{APP_NAME} {APP_VERSION} · DB Schema {DB_SCHEMA_VERSION} · 数据库：{database_path}")
+    def show_writer_target(target):
+        window.statusBar().showMessage(f"{APP_NAME} {APP_VERSION} · 插入目标：{writer_name(target)} · DB Schema {DB_SCHEMA_VERSION} · 数据库：{database_path}")
+    settings_page.writer_target_changed.connect(show_writer_target)
+    show_writer_target(settings_service.load().writer_target)
     navigate(search_page)
     show_person_mode(search_page)
     return window

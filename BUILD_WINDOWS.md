@@ -1,4 +1,4 @@
-# Nekozzz 0.9.2 Windows Portable
+# Nekozzz 0.9.3 Windows Portable — Release Candidate
 
 ## Build
 
@@ -11,8 +11,10 @@ From the project directory, using the project virtual environment:
 
 For a clean audited rebuild: `.\build_windows.ps1 -Clean`.
 This does not change the data-directory guard or dependency pins.
-The current final audit status is NOT READY — BLOCKERS REMAIN; inspect
-NEKOZZZ_0.9.2_FINAL_BINARY_LICENSE_AUDIT.md before distributing the binary.
+Current release-preparation evidence is in NEKOZZZ_0.9.3_RELEASE_AUDIT.md.
+The 0.9.2 audit describes an older release and is not this RC's clearance.
+For an isolated RC, use the same spec/environment wrapper with fresh
+`--workpath` and `--distpath`; never overwrite an existing portable data tree.
 
 Output: `dist/Nekozzz/Nekozzz.exe`, `_internal/`, and empty `database/`,
 `Images/`, `config/`, `Backups/`. Distribute the **whole directory**.
@@ -20,7 +22,7 @@ No Access sample, SQLite business database, existing Images or settings are bund
 The spec includes immutable UI, normalized PNG, personnel Word template,
 migration schema Excel, LICENSE and third-party notices.
 The ICO and Windows version metadata are embedded into the executable.
-Application version comes from `version.py` (0.9.2, Windows four-part 0.9.2.0).
+Application version comes from `version.py` (0.9.3, Windows four-part 0.9.3.0).
 
 Runtime prerequisites: Windows 10/11 x64 and a sufficient Microsoft Visual C++
 v14 x64 Redistributable installed on the system. VC runtime DLLs and the
@@ -94,7 +96,8 @@ Older Windows may ignore unsupported caption colors.
 - Restore testing must use the isolated complete data root, not just another
   `--database` path. Success exits the application; restart to check restored data.
 - Test on a second Windows PC without Python. Word insertion requires desktop
-  Microsoft Word; Access migration requires a matching 64-bit Access ODBC driver.
+  Microsoft Word or WPS Writer, explicitly selected in Settings; Access migration
+  requires a matching 64-bit Access ODBC driver. Open the target document first.
   Neither external product/driver is included in the portable application.
 
 Experimental personnel AutoFill is included. No schema upgrades or onefile build.
@@ -103,7 +106,7 @@ Experimental personnel AutoFill is included. No schema upgrades or onefile build
 
 Include LICENSE, THIRD_PARTY_NOTICES.md and licenses/ with the whole onedir folder.
 The accepted runtime is frozen. Final delivery files and the remaining specific
-source-companion items are recorded in NEKOZZZ_0.9.2_FINAL_RELEASE_CLEARANCE.md,
+source delivery and verification are recorded in NEKOZZZ_0.9.3_RELEASE_AUDIT.md,
 SOURCE_AVAILABILITY.md and SOURCE_DELIVERY_INDEX.json. Historical audits refer
 to earlier bundles and are not the final dependency table. Do not rebuild the
 accepted executable for documentation-only changes.

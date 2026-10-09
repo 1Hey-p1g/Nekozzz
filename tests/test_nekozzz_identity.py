@@ -13,12 +13,12 @@ from version import APP_NAME, APP_VERSION, DB_SCHEMA_VERSION, BACKUP_FORMAT_VERS
 
 class NekozzzIdentityTests(unittest.TestCase):
     def test_identity_and_versions(self):
-        self.assertEqual((APP_NAME, APP_VERSION), ('Nekozzz', '0.9.2'))
+        self.assertEqual((APP_NAME, APP_VERSION), ('Nekozzz', '0.9.3'))
         self.assertEqual((DB_SCHEMA_VERSION, BACKUP_FORMAT_VERSION), (1, 1))
         app = QApplication.instance() or QApplication([])
         dialog = AboutPage()
         identity = '\n'.join(label.text() for label in dialog.findChildren(QLabel))
-        self.assertIn('Version 0.9.2', identity)
+        self.assertIn('Version 0.9.3', identity)
         self.assertIn('1Hey-p1g', identity)
         self.assertIn('GNU Affero General Public License v3.0', identity)
         from version import APP_LICENSE
