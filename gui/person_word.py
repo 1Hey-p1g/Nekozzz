@@ -10,11 +10,12 @@ from PySide6.QtWidgets import (
 
 from gui.common import (
     CertificateTextDelegate, CheckBoxDelegate, ImagePreview, RowsModel, TaskRowsModel,
-    format_person_summary, table_view, task_row_widget,
+    format_person_summary, table_view, task_row_widget, StyledComboBox,
 )
 from services.person_word import PersonWordJob, PersonWordPreflightError, PersonWordWriteError
 from services.word_service import WordNoActiveDocumentError, WordNotRunningError, WordServiceError
 from services.office_writer import writer_error_message
+from services.people import expiry_status
 
 
 class PersonOrderList(QListWidget):
@@ -50,7 +51,7 @@ class PersonWordPage(QWidget):
         self.people_model = RowsModel([("姓名", "姓名")], self)
         self.certificate_model = TaskRowsModel(
             [("选择", ""), ("证书类型", "证书类型"), ("证书名称", "证书名称"),
-             ("证书编号", "证书编号")], self, check_key="证书ID",
+             ("证书编号", "证书编号"), ("有效期", "有效期"), ("状态", "状态")], self, check_key="证书ID",
         )
         self._build()
         self.search_people()
@@ -71,9 +72,19 @@ class PersonWordPage(QWidget):
         finder = QHBoxLayout()
         self.name_filter = QLineEdit()
         self.name_filter.setPlaceholderText("搜索人员姓名")
+        self.certificate_name_filter = QLineEdit()
+        self.certificate_name_filter.setPlaceholderText("搜索证书名称")
+        self.certificate_status_filter = StyledComboBox()
+        for label, value in (("全部状态", ""), ("有效", "有效"),
+                             ("即将到期", "即将到期"), ("已过期", "已过期")):
+            self.certificate_status_filter.addItem(label, value)
         search = QPushButton("搜索")
+        self.clear_filters_button = QPushButton("清除")
         finder.addWidget(self.name_filter, 1)
+        finder.addWidget(self.certificate_name_filter, 1)
+        finder.addWidget(self.certificate_status_filter)
         finder.addWidget(search)
+        finder.addWidget(self.clear_filters_button)
         root.addLayout(finder)
 
         split = QSplitter(Qt.Horizontal)
@@ -115,6 +126,8 @@ class PersonWordPage(QWidget):
         self.certificates_view.setItemDelegate(CertificateTextDelegate(self.certificates_view))
         self.certificates_view.setItemDelegateForColumn(0, CheckBoxDelegate(self.certificates_view))
         self.certificates_view.setColumnWidth(0, 58)
+        self.certificates_view.setColumnWidth(4, 110)
+        self.certificates_view.setColumnWidth(5, 100)
         self.certificates_view.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.certificates_view.setVerticalScrollMode(QAbstractItemView.ScrollPerItem)
         right_layout.addWidget(self.certificates_view)
@@ -162,6 +175,8 @@ class PersonWordPage(QWidget):
 
         search.clicked.connect(self.search_people)
         self.name_filter.returnPressed.connect(self.search_people)
+        self.certificate_name_filter.returnPressed.connect(self.search_people)
+        self.clear_filters_button.clicked.connect(self.clear_search_filters)
         self.people_view.doubleClicked.connect(self.add_person)
         self.people_view.clicked.connect(self.view_search_person)
         self.people_view.selectionModel().currentRowChanged.connect(self.view_search_person)
@@ -186,9 +201,18 @@ class PersonWordPage(QWidget):
         attachments.setFixedHeight(attachment_height)
 
     def search_people(self):
-        rows = self.service.people.search(self.name_filter.text())
+        viewed = self.viewed_person_id
+        rows = self.service.people.search(
+            self.name_filter.text(), self.certificate_name_filter.text(),
+            certificate_status=self.certificate_status_filter.currentData())
         self.people_model.set_rows(rows)
-        self.view_person(self.viewed_person_id)
+        self.view_person(viewed if any(row["人员ID"] == viewed for row in rows) else None)
+
+    def clear_search_filters(self):
+        self.name_filter.clear()
+        self.certificate_name_filter.clear()
+        self.certificate_status_filter.setCurrentIndex(0)
+        self.search_people()
 
     def add_person(self, index=None):
         person = self.people_model.record(index if index is not None else self.people_view.currentIndex())
@@ -267,6 +291,8 @@ class PersonWordPage(QWidget):
             self.view_person(record['人员ID'])
 
     def view_person(self, person_id):
+        previous_certificate = self.certificate_model.active_id if person_id == self.viewed_person_id else None
+        previous_attachment = self.attachment_model.record(self.attachments_view.currentIndex())
         record = self.service.people.get(person_id) if person_id is not None else None
         if record is None:
             person_id = None
@@ -288,14 +314,23 @@ class PersonWordPage(QWidget):
         self.current_person.setText(f"当前人员：{record['姓名'] if record else person_id}")
         self.certificate_model.checked = item.selected_certificate_ids if item else set()
         self.certificate_model.set_active_id(None)
-        rows = self.service.certificates.for_person(person_id)
+        rows = [{**row, '状态': expiry_status(row['有效期'])}
+                for row in self.service.certificates.for_person(person_id)]
         self.certificate_model.set_rows(rows)
         self.viewing_certificate.setText("选择证书以查看当前项")
         self.attachment_model.set_rows([])
         self.preview.show_path(None)
         if rows:
-            self.certificates_view.setCurrentIndex(self.certificate_model.index(0, 1))
-            self._certificate_changed(self.certificates_view.currentIndex(), None)
+            target = next((i for i, row in enumerate(self.certificate_model.rows)
+                           if row['证书ID'] == previous_certificate), 0)
+            self.certificates_view.setCurrentIndex(self.certificate_model.index(target, 1))
+            if self.certificate_model.active_id != self.certificate_model.rows[target]['证书ID']:
+                self._certificate_changed(self.certificates_view.currentIndex(), None)
+            if previous_attachment and self.certificate_model.active_id == previous_certificate:
+                target_attachment = next((i for i, row in enumerate(self.attachment_model.rows)
+                                          if row['ID'] == previous_attachment['ID']), None)
+                if target_attachment is not None:
+                    self.attachments_view.selectRow(target_attachment)
 
     def _certificate_changed(self, current, _previous):
         certificate = self.certificate_model.record(current)

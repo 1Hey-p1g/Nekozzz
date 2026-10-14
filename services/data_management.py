@@ -7,17 +7,18 @@ import tempfile
 import sqlite3
 from contextlib import closing
 
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
 
 from config.paths import DATA_ROOT, EXCEL_FILE
 from database.initializer import check_new_target
 from database.runtime import runtime_connection, validate_runtime_path, runtime_maintenance
 from database.initializer import publish_staging
 from migration.migration_validator import validate_target_structure
-from migration.migration_manager import migrate_access
 from services.backup import BackupService, publish_file, RestoreRecoveryRequiredError
+
+def migrate_access(*args, **kwargs):
+    """Keep the existing injection seam without importing the migration engine."""
+    from migration.migration_manager import migrate_access as execute
+    return execute(*args, **kwargs)
 
 
 class DataManagementService:
@@ -114,6 +115,9 @@ class DataManagementService:
                 shutil.rmtree(work, ignore_errors=True)
 
     def export_people(self, target_path):
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+        from openpyxl.utils import get_column_letter
         with runtime_connection(self.database_path) as connection:
             columns = [(row['name'], row['type']) for row in connection.execute('PRAGMA table_info(人员表)')]
             # Only this real V1 table; no certificate/project joins or derived columns.

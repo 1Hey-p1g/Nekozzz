@@ -1,42 +1,12 @@
-"""Qt Designer shell and the two real person workspaces."""
-
-from PySide6.QtCore import QEvent, QObject
-from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QHBoxLayout, QPushButton, QStackedWidget, QWidget
-
-from config.paths import UI_FILE, resource_path
+"""Designer shell with cached, first-visit business pages."""
+from PySide6.QtWidgets import QApplication, QPushButton, QStackedWidget
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication
+from config.paths import UI_FILE, resource_path
 from gui.theme import ThemeManager
 from gui.copy_toast import CopyToast
-from gui.person_manage import PersonManagePage
-from gui.person_search import PersonSearchPage
-from gui.person_word import PersonWordPage
-from gui.person_autofill import PersonAutoFillPage
-from services.autofill.person_service import PersonAutoFillService
-from gui.settings_page import SettingsPage
-from gui.about import AboutPage
-from gui.project_manage import ProjectManagePage
-from gui.project_search import ProjectSearchPage
-from services.projects import ProjectService
-from services.project_word import ProjectWordOutputService
-from services.person_word import PersonWordOutputService
 from services.settings import SettingsService
 from services.office_writer import OfficeWriterConnector, writer_name
-from services.attachments import CertificateAttachmentService, ProjectAttachmentService
-from services.attachments import QualificationAttachmentService
-from services.qualifications import QualificationService
-from services.qualification_word import QualificationWordOutputService
-from gui.qualification_search import QualificationSearchPage
-from gui.qualification_manage import QualificationManagePage
-from gui.award_finance import ReportSearchPage, ReportManagePage, AwardFinanceManagePage
-from services.award_finance import AwardService, FinanceService
-from services.report_word import ReportWordOutputService
-from services.attachments import AwardAttachmentService, FinanceAttachmentService
-from services.data_management import DataManagementService
-from gui.data_management import DataManagementController
 from version import APP_NAME, APP_VERSION, DB_SCHEMA_VERSION
-
 
 STYLE = """
 QMainWindow, QStackedWidget { background: #f6f8fb; color: #1e293b; }
@@ -82,237 +52,203 @@ QStatusBar { background: #e8eef5; color: #395575; }
 """
 
 
-class _CloseGuard(QObject):
-    def __init__(self, *manage_pages):
-        super().__init__()
-        self.manage_pages = manage_pages
-
-    def eventFilter(self, _object, event):
-        if event.type() == QEvent.Close:
-            if getattr(_object, '_data_operation_running', False):
-                event.ignore()
-                return True
-            if getattr(_object, '_restore_completed', False) or getattr(_object, '_data_recovery_required', False):
-                return False
-        if event.type() == QEvent.Close and not all(page.can_leave() for page in self.manage_pages):
-            event.ignore()
-            return True
-        return False
-
-
 def build_main_window(service, database_path, *, settings_service=None, attachment_service=None,
                       person_word_service=None, project_service=None, project_word_service=None,
                       project_attachment_service=None, qualification_service=None,
                       qualification_word_service=None, qualification_attachment_service=None,
                       award_service=None, finance_service=None, award_word_service=None, finance_word_service=None,
                       award_attachment_service=None, finance_attachment_service=None, data_management_service=None):
-    window = QUiLoader().load(str(UI_FILE))
+    from gui.lazy_window import WindowLoader, CloseGuard
+    from gui.window_geometry import restore_window_geometry
+    window = WindowLoader().load(str(UI_FILE))
     if window is None:
-        raise RuntimeError(f"无法加载主界面: {UI_FILE}")
-    stack = window.findChild(QStackedWidget, "workspace")
-    toast = CopyToast(stack)
-    search_page = PersonSearchPage(service, copy_to_clipboard=toast.copy)
+        raise RuntimeError(f'无法加载主界面: {UI_FILE}')
+    stack = window.findChild(QStackedWidget, 'workspace')
+    window.workspace = stack
+    window.created_pages = {}
     settings_service = settings_service or SettingsService()
     writer_factory = OfficeWriterConnector(settings_service)
-    multi_page = PersonWordPage(
-        service, person_word_service or PersonWordOutputService(service, word_factory=writer_factory),
-        settings_service, toast.show_message, copy_to_clipboard=toast.copy,
-    )
-    autofill_page = PersonAutoFillPage(service, PersonAutoFillService(service, word_factory=writer_factory), settings_service, toast.show_message)
-    stack.addWidget(autofill_page)
-    window.person_autofill_page = autofill_page
-    manage_page = PersonManagePage(
-        service, settings_service=settings_service,
-        attachment_service=attachment_service or CertificateAttachmentService(database_path),
-        notify=toast.show_message,
-    )
-    project_service = project_service or ProjectService(database_path)
-    project_manage_page = ProjectManagePage(
-        project_service, settings_service=settings_service,
-        attachment_service=project_attachment_service or ProjectAttachmentService(database_path),
-        notify=toast.show_message,
-    )
-    project_search_page = ProjectSearchPage(
-        project_service, project_word_service or ProjectWordOutputService(project_service.projects, word_factory=writer_factory),
-        settings_service, toast.show_message, copy_to_clipboard=toast.copy,
-    )
-    qualification_service = qualification_service or QualificationService(database_path)
-    qualification_manage_page = QualificationManagePage(
-        qualification_service, settings_service=settings_service,
-        attachment_service=qualification_attachment_service or QualificationAttachmentService(database_path),
-        notify=toast.show_message,
-    )
-    qualification_search_page = QualificationSearchPage(
-        qualification_service, qualification_word_service or QualificationWordOutputService(qualification_service.qualifications, word_factory=writer_factory),
-        settings_service, toast.show_message, copy_to_clipboard=toast.copy,
-    )
-    award_service = award_service or AwardService(database_path)
-    finance_service = finance_service or FinanceService(database_path)
-    award_search_page = ReportSearchPage(
-        award_service, award_word_service or ReportWordOutputService(award_service.repository, word_factory=writer_factory),
-        settings_service, toast.show_message, copy_to_clipboard=toast.copy)
-    finance_search_page = ReportSearchPage(
-        finance_service, finance_word_service or ReportWordOutputService(finance_service.repository, word_factory=writer_factory),
-        settings_service, toast.show_message, copy_to_clipboard=toast.copy)
-    award_manage_page = ReportManagePage(
-        award_service, settings_service=settings_service,
-        attachment_service=award_attachment_service or AwardAttachmentService(database_path), notify=toast.show_message)
-    finance_manage_page = ReportManagePage(
-        finance_service, settings_service=settings_service,
-        attachment_service=finance_attachment_service or FinanceAttachmentService(database_path), notify=toast.show_message)
-    award_finance_manage_page = AwardFinanceManagePage(award_manage_page, finance_manage_page)
-    data_management_service = data_management_service or DataManagementService(
-        database_path, settings_path=settings_service.path)
-    settings_page = SettingsPage(settings_service, toast.show_message,
-                                 service.certificates.list_certificate_types,
-                                 project_service.projects.list_attachment_types,
-                                 qualification_service.qualifications.list_names,
-                                 data_management=data_management_service)
-    stack.addWidget(search_page)
-    stack.addWidget(multi_page)
-    stack.addWidget(manage_page)
-    stack.addWidget(settings_page)
-    about_page = AboutPage()
-    stack.addWidget(about_page)
-    window.about_page = about_page
-    stack.addWidget(project_manage_page)
-    stack.addWidget(project_search_page)
-    stack.addWidget(qualification_manage_page)
-    stack.addWidget(qualification_search_page)
-    for page in (award_search_page, finance_search_page, award_finance_manage_page):
-        stack.addWidget(page)
-    window.search_page = search_page
-    window.person_word_page = multi_page
-    window.manage_page = manage_page
-    window.settings_page = settings_page
-    window.project_manage_page = project_manage_page
-    window.project_search_page = project_search_page
-    window.qualification_manage_page = qualification_manage_page
-    window.qualification_search_page = qualification_search_page
-    window.award_search_page = award_search_page
-    window.finance_search_page = finance_search_page
-    window.award_finance_manage_page = award_finance_manage_page
-    window.award_manage_page = award_manage_page
-    window.finance_manage_page = finance_manage_page
-    window.copy_toast = toast
-    window.copy_to_clipboard = toast.copy
-    navigation = {
-        "navPersonAutoFill": autofill_page,
-        "navPersonSearch": search_page,
-        "navPersonManage": manage_page,
-        "navSettings": settings_page,
-        "navAbout": about_page,
-        "navProjectSearch": project_search_page,
-        "navProjectManage": project_manage_page,
-        "navQualSearch": qualification_search_page,
-        "navQualManage": qualification_manage_page,
-        "navAwardSearch": award_search_page,
-        "navFinanceSearch": finance_search_page,
-        "navAwardFinanceManage": award_finance_manage_page,
-    }
-
-    mode_buttons = []
-    def add_mode_bar(page):
-        bar = QWidget(page)
-        row = QHBoxLayout(bar)
-        row.setContentsMargins(0, 0, 0, 3)
-        row.setSpacing(8)
-        single = QPushButton("单人选择")
-        multiple = QPushButton("多人 Word 输出")
-        multiple.setToolTip('使用设置中选择的 Microsoft Word 或 WPS Writer')
-        for button in (single, multiple):
-            button.setCheckable(True)
-            button.setObjectName("personModeButton")
-            row.addWidget(button)
-        row.addStretch()
-        page.layout().insertWidget(0, bar)
-        mode_buttons.append((single, multiple))
-        single.clicked.connect(lambda: show_person_mode(search_page))
-        multiple.clicked.connect(lambda: show_person_mode(multi_page))
-
-    person_mode = search_page
-
-    def show_person_mode(page):
-        nonlocal person_mode
-        person_mode = page
-        stack.setCurrentWidget(page)
-        for single, multiple in mode_buttons:
-            single.setChecked(page is search_page)
-            multiple.setChecked(page is multi_page)
-        window.findChild(QPushButton, "navPersonSearch").setChecked(True)
-
-    add_mode_bar(search_page)
-    add_mode_bar(multi_page)
-
-    def navigate(page):
-        if page is search_page:
-            page = person_mode
-        if stack.currentWidget() is page and any(
-            window.findChild(QPushButton, name).isChecked() for name in navigation
-        ):
-            return
-        current = stack.currentWidget()
-        if current in (manage_page, project_manage_page, qualification_manage_page, award_finance_manage_page) and current is not page:
-            if not current.can_leave():
-                return
-            if current.mode != "view":
-                current.discard_changes()
-        if page is manage_page:
-            manage_page.refresh_people()
-        elif page is search_page:
-            search_page.search_people()
-        elif page is multi_page:
-            multi_page.search_people()
-        elif page is settings_page:
-            settings_page.refresh_certificate_types()
-        elif page is project_manage_page:
-            project_manage_page.refresh_projects()
-        elif page is project_search_page:
-            project_search_page.search()
-            project_search_page.refresh_task(project_search_page.current_id())
-        elif page is qualification_manage_page:
-            qualification_manage_page.refresh_qualifications()
-        elif page is qualification_search_page:
-            qualification_search_page.refresh_companies()
-            qualification_search_page.search()
-        elif page is award_finance_manage_page:
-            page.refresh_records()
-        elif page in (award_search_page, finance_search_page):
-            page.search()
-        stack.setCurrentWidget(page)
-        for name, target in navigation.items():
-            window.findChild(QPushButton, name).setChecked(
-                target is page or (name == "navPersonSearch" and page is multi_page)
-            )
-
-    for name, page in navigation.items():
-        button = window.findChild(QPushButton, name)
-        button.setEnabled(True)
-        button.setCheckable(True)
-        button.clicked.connect(lambda _checked=False, target=page: navigate(target))
-    guard = _CloseGuard(manage_page, project_manage_page, qualification_manage_page, award_finance_manage_page)
-    window.installEventFilter(guard)
-    window._close_guard = guard
-    def prepare_restore():
-        if not all(page.can_leave() for page in guard.manage_pages):
-            return False
-        for page in guard.manage_pages:
-            page.discard_changes()
-        return True
-    window.data_management_controller = DataManagementController(
-        window, settings_page, data_management_service, toast.show_message, prepare_restore)
-    window.setStyleSheet(STYLE)
-    window.setWindowIcon(QIcon(str(resource_path('resources/icon.png'))))
+    toast = CopyToast(stack)
+    window.copy_toast, window.copy_to_clipboard = toast, toast.copy
     app = QApplication.instance()
     if not hasattr(app, 'theme_manager'):
         app.theme_manager = ThemeManager(app)
-    settings_page.theme_changed.connect(app.theme_manager.apply)
     app.theme_manager.apply(settings_service.load().theme)
-    window.setWindowTitle(f'{APP_NAME} {APP_VERSION} · 投标资料工作台')
+    domains = {}
+    def domain(name):
+        if name not in domains:
+            if name == 'project':
+                from services.projects import ProjectService
+                domains[name] = project_service or ProjectService(database_path)
+            elif name == 'qualification':
+                from services.qualifications import QualificationService
+                domains[name] = qualification_service or QualificationService(database_path)
+            elif name == 'award':
+                from services.award_finance import AwardService
+                domains[name] = award_service or AwardService(database_path)
+            elif name == 'finance':
+                from services.award_finance import FinanceService
+                domains[name] = finance_service or FinanceService(database_path)
+            elif name == 'data':
+                from services.data_management import DataManagementService
+                domains[name] = data_management_service or DataManagementService(database_path, settings_path=settings_service.path)
+        return domains[name]
+
+    def person_page():
+        from gui.person_word import PersonWordPage
+        from services.person_word import PersonWordOutputService
+        return PersonWordPage(service, person_word_service or PersonWordOutputService(service, word_factory=writer_factory),
+                              settings_service, toast.show_message, copy_to_clipboard=toast.copy)
+
+    def person_manage():
+        from gui.person_manage import PersonManagePage
+        from services.attachments import CertificateAttachmentService
+        return PersonManagePage(service, settings_service=settings_service,
+                                attachment_service=attachment_service or CertificateAttachmentService(database_path), notify=toast.show_message)
+
+    def autofill():
+        from gui.person_autofill import PersonAutoFillPage
+        from services.autofill.person_service import PersonAutoFillService
+        return PersonAutoFillPage(service, PersonAutoFillService(service, word_factory=writer_factory), settings_service, toast.show_message)
+
+    def project_manage():
+        from gui.project_manage import ProjectManagePage
+        from services.attachments import ProjectAttachmentService
+        return ProjectManagePage(domain('project'), settings_service=settings_service,
+                                 attachment_service=project_attachment_service or ProjectAttachmentService(database_path), notify=toast.show_message)
+
+    def project_search():
+        from gui.project_search import ProjectSearchPage
+        from services.project_word import ProjectWordOutputService
+        source = domain('project')
+        return ProjectSearchPage(source, project_word_service or ProjectWordOutputService(source.projects, word_factory=writer_factory),
+                                 settings_service, toast.show_message, copy_to_clipboard=toast.copy)
+
+    def qualification_manage():
+        from gui.qualification_manage import QualificationManagePage
+        from services.attachments import QualificationAttachmentService
+        return QualificationManagePage(domain('qualification'), settings_service=settings_service,
+                                       attachment_service=qualification_attachment_service or QualificationAttachmentService(database_path), notify=toast.show_message)
+
+    def qualification_search():
+        from gui.qualification_search import QualificationSearchPage
+        from services.qualification_word import QualificationWordOutputService
+        source = domain('qualification')
+        return QualificationSearchPage(source, qualification_word_service or QualificationWordOutputService(source.qualifications, word_factory=writer_factory),
+                                       settings_service, toast.show_message, copy_to_clipboard=toast.copy)
+
+    def report_search(name):
+        from gui.award_finance import ReportSearchPage
+        from services.report_word import ReportWordOutputService
+        source = domain(name)
+        supplied = award_word_service if name == 'award' else finance_word_service
+        return ReportSearchPage(source, supplied or ReportWordOutputService(source.repository, word_factory=writer_factory),
+                                settings_service, toast.show_message, copy_to_clipboard=toast.copy)
+
+    def report_manage():
+        from gui.award_finance import ReportManagePage, AwardFinanceManagePage
+        from services.attachments import AwardAttachmentService, FinanceAttachmentService
+        award = ReportManagePage(domain('award'), settings_service=settings_service,
+                                attachment_service=award_attachment_service or AwardAttachmentService(database_path), notify=toast.show_message)
+        finance = ReportManagePage(domain('finance'), settings_service=settings_service,
+                                  attachment_service=finance_attachment_service or FinanceAttachmentService(database_path), notify=toast.show_message)
+        aggregate = AwardFinanceManagePage(award, finance)
+        window.created_pages['award_manage_page'], window.created_pages['finance_manage_page'] = award, finance
+        return aggregate
+
+    def prepare_restore():
+        pages = window.managed_pages()
+        if not all(page.can_leave() for page in pages):
+            return False
+        for page in pages:
+            page.discard_changes()
+        return True
+
     def show_writer_target(target):
-        window.statusBar().showMessage(f"{APP_NAME} {APP_VERSION} · 插入目标：{writer_name(target)} · DB Schema {DB_SCHEMA_VERSION} · 数据库：{database_path}")
-    settings_page.writer_target_changed.connect(show_writer_target)
+        window.statusBar().showMessage(f'{APP_NAME} {APP_VERSION} · 插入目标：{writer_name(target)} · DB Schema {DB_SCHEMA_VERSION} · 数据库：{database_path}')
+
+    def settings_page():
+        from gui.settings_page import SettingsPage
+        from gui.data_management import DataManagementController
+        data = domain('data')
+        page = SettingsPage(settings_service, toast.show_message, service.certificates.list_certificate_types,
+                            domain('project').projects.list_attachment_types, domain('qualification').qualifications.list_names,
+                            data_management=data)
+        page.theme_changed.connect(app.theme_manager.apply)
+        page.writer_target_changed.connect(show_writer_target)
+        window.data_management_controller = DataManagementController(window, page, data, toast.show_message, prepare_restore)
+        return page
+
+    def about_page():
+        from gui.about import AboutPage
+        return AboutPage()
+
+    window._page_factories = {
+        'person_word_page': person_page, 'manage_page': person_manage, 'person_autofill_page': autofill,
+        'project_manage_page': project_manage, 'project_search_page': project_search,
+        'qualification_manage_page': qualification_manage, 'qualification_search_page': qualification_search,
+        'award_search_page': lambda: report_search('award'), 'finance_search_page': lambda: report_search('finance'),
+        'award_finance_manage_page': report_manage, 'settings_page': settings_page, 'about_page': about_page,
+    }
+    navigation = {
+        'navPersonSearch': 'person_word_page', 'navPersonManage': 'manage_page', 'navPersonAutoFill': 'person_autofill_page',
+        'navProjectSearch': 'project_search_page', 'navProjectManage': 'project_manage_page',
+        'navQualSearch': 'qualification_search_page', 'navQualManage': 'qualification_manage_page',
+        'navAwardSearch': 'award_search_page', 'navFinanceSearch': 'finance_search_page',
+        'navAwardFinanceManage': 'award_finance_manage_page', 'navSettings': 'settings_page', 'navAbout': 'about_page',
+    }
+
+    def navigate(name):
+        if getattr(window, '_data_operation_running', False) or getattr(window, '_restore_completed', False) or getattr(window, '_data_recovery_required', False):
+            return
+        current = stack.currentWidget()
+        if name in window.created_pages and window.created_pages[name] is current:
+            for button_name, target in navigation.items():
+                window.findChild(QPushButton, button_name).setChecked(target == name)
+            return
+        if current in window.managed_pages():
+            if not current.can_leave():
+                return
+            if current.mode != 'view':
+                current.discard_changes()
+        existing = name in window.created_pages
+        page = window.get_page(name)
+        if current is page:
+            return
+        if existing:
+            # Refresh underlying data with the retained filters/selection, not
+            # new instances. Qualification refresh never reapplies default ID 1.
+            if name == 'manage_page': page.refresh_people()
+            elif name == 'person_word_page': page.search_people()
+            elif name == 'settings_page': page.refresh_certificate_types()
+            elif name == 'project_manage_page': page.refresh_projects()
+            elif name == 'project_search_page':
+                page.search()
+                page.refresh_task(page.current_id())
+            elif name == 'qualification_manage_page': page.refresh_qualifications()
+            elif name == 'qualification_search_page':
+                page.refresh_companies()
+                page.search()
+            elif name == 'award_finance_manage_page': page.refresh_records()
+            elif name in ('award_search_page', 'finance_search_page'): page.search()
+        stack.setCurrentWidget(page)
+        for button_name, target in navigation.items():
+            window.findChild(QPushButton, button_name).setChecked(target == name)
+
+    window.navigate = navigate
+    window.prepare_restore = prepare_restore
+    for button_name, target in navigation.items():
+        button = window.findChild(QPushButton, button_name)
+        button.setEnabled(True)
+        button.setCheckable(True)
+        button.clicked.connect(lambda _checked=False, name=target: navigate(name))
+    guard = CloseGuard(window, settings_service)
+    window.installEventFilter(guard)
+    window._close_guard = guard
+    window.setStyleSheet(STYLE)
+    window.setWindowIcon(QIcon(str(resource_path('resources/icon.png'))))
+    window.setWindowTitle(f'{APP_NAME} {APP_VERSION} · 投标资料工作台')
     show_writer_target(settings_service.load().writer_target)
-    navigate(search_page)
-    show_person_mode(search_page)
+    restore_window_geometry(window, settings_service)
+    navigate('person_word_page')
     return window

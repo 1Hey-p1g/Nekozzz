@@ -101,7 +101,7 @@ class ReportTests(unittest.TestCase):
 
     def test_search_and_stable_year_order(self):
         for service, _, _, first, recent in self.domains():
-            self.assertEqual([recent, first], [r[service.repository.key] for r in service.search()])
+            self.assertEqual([first, recent], [r[service.repository.key] for r in service.search()])
             self.assertEqual([first], [r[service.repository.key] for r in service.search(year='2024')])
             self.assertEqual([], service.search(year="' OR 1=1 --"))
             self.assertEqual([], service.search(year='%'))
@@ -109,7 +109,7 @@ class ReportTests(unittest.TestCase):
         self.assertEqual([], self.awards.search(name='优质', project='乙'))
         third = self.awards.save(None, {'业绩ID': 1, '获奖名称': '未知年份', '获奖年份': None})
         fourth = self.awards.save(None, {'业绩ID': 1, '获奖名称': '同年份', '获奖年份': '2025年'})
-        self.assertEqual([self.b, fourth, self.a, third], [r['获奖ID'] for r in self.awards.search()])
+        self.assertEqual([self.a, self.b, third, fourth], [r['获奖ID'] for r in self.awards.search()])
 
     def test_crud_invalid_input_fk_and_restrict(self):
         for service, publisher, _, record_id, _ in self.domains():
@@ -310,6 +310,8 @@ class ReportTests(unittest.TestCase):
         with runtime_connection(self.db, write=True) as connection:
             connection.execute('INSERT INTO 财务报告图表(年度ID,路径) VALUES(?,?)', (self.g, 'Images/missing.jpg'))
         page = self.selection_page(self.finance, self.finance_output)
+        index = next(i for i, row in enumerate(page.model.rows) if row['年度ID'] == self.g)
+        page.records_view.setCurrentIndex(page.model.index(index, 1))
         self.assertIn('图片文件尚未就位', page.preview.text())
         QGuiApplication.clipboard().setText('unchanged')
         QTest.mouseDClick(page.info_view.viewport(), Qt.LeftButton,
@@ -444,7 +446,7 @@ class ReportTests(unittest.TestCase):
         geometry = window.geometry()
         for _ in range(20):
             for name, page in (('navAwardSearch', window.award_search_page), ('navFinanceSearch', window.finance_search_page),
-                               ('navAwardFinanceManage', window.award_finance_manage_page), ('navPersonSearch', window.search_page)):
+                               ('navAwardFinanceManage', window.award_finance_manage_page), ('navPersonSearch', window.person_word_page)):
                 window.findChild(QPushButton, name).click()
                 self.app.processEvents()
                 self.assertIs(page, stack.currentWidget())

@@ -10,16 +10,28 @@ class PersonRepository:
     def __init__(self, database_path):
         self.database_path = database_path
 
-    def search(self, name="", certificate_name=""):
+    def search(self, name="", certificate_name="", *, certificate_status=""):
+        if certificate_status not in ("", "有效", "即将到期", "已过期"):
+            raise ValueError("不支持的证书状态")
         with runtime_connection(self.database_path) as connection:
+            # Local import avoids the PeopleService/Repository import cycle.
+            # One EXISTS uses the same certificate for both predicates.
+            from services.people import expiry_status
+            from datetime import date
+            today = date.today()
+            connection.create_function("certificate_status", 1,
+                lambda value: expiry_status(value, today))
             return [dict(row) for row in connection.execute(
                 'SELECT 人员ID,姓名,身份证号,联系电话,学历,专业 FROM 人员表 '
                 'WHERE 姓名 LIKE ? ESCAPE \'\\\' AND '
-                '(?=\'\' OR EXISTS (SELECT 1 FROM 人员证书表 AS C WHERE C.人员ID=人员表.人员ID '
-                'AND C.证书名称 LIKE ? ESCAPE \'\\\')) '
-                'ORDER BY 姓名 COLLATE NOCASE,人员ID',
-                (f"%{_escape_like(name.strip())}%", certificate_name.strip(),
-                 f"%{_escape_like(certificate_name.strip())}%"),
+                '((?=\'\' AND ?=\'\') OR EXISTS (SELECT 1 FROM 人员证书表 AS C WHERE C.人员ID=人员表.人员ID '
+                'AND C.证书名称 LIKE ? ESCAPE \'\\\' '
+                'AND (?=\'\' OR (?=\'有效\' AND certificate_status(C.有效期) IN (\'正常有效\',\'长期有效\')) '
+                'OR certificate_status(C.有效期)=?))) '
+                'ORDER BY 人员ID',
+                (f"%{_escape_like(name.strip())}%", certificate_name.strip(), certificate_status,
+                 f"%{_escape_like(certificate_name.strip())}%", certificate_status,
+                 certificate_status, certificate_status),
             )]
 
     def get(self, person_id):
@@ -27,13 +39,13 @@ class PersonRepository:
             row = connection.execute('SELECT * FROM 人员表 WHERE 人员ID=?', (person_id,)).fetchone()
             return dict(row) if row else None
 
-    def projects(self, person_id):
+    def projects(self, person_id, *, document_order=False):
         """Historical roles only; never infer this tender's proposed role."""
         with runtime_connection(self.database_path) as connection:
             return [dict(row) for row in connection.execute(
                 'SELECT R.ID,R.人员ID,R.业绩ID,R.担任角色,P.项目名称 '
                 'FROM 人员业绩表 R JOIN 公司业绩表 P ON P.业绩ID=R.业绩ID '
-                'WHERE R.人员ID=? ORDER BY P.项目名称,R.业绩ID,R.ID', (person_id,))]
+                'WHERE R.人员ID=? ORDER BY ' + ('P.项目名称,R.业绩ID,R.ID' if document_order else 'R.ID'), (person_id,))]
 
     def add(self, values):
         columns = ",".join(f'"{field}"' for field in PERSON_FIELDS)

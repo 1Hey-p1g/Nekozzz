@@ -68,12 +68,12 @@ class AwardRepository(_ReportRepository):
         parameters = [f'%{_escape_like(value.strip())}%' for value in (name, year, grade, project)]
         with runtime_connection(self.database_path) as connection:
             rows = [dict(row) for row in connection.execute(
-                self.select_sql + ' WHERE ' + ' AND '.join(conditions), parameters)]
-        return sorted(rows, key=self.order_key)
+                self.select_sql + ' WHERE ' + ' AND '.join(conditions) + ' ORDER BY R.获奖ID', parameters)]
+        return rows
 
     def projects(self):
         with runtime_connection(self.database_path) as connection:
-            return [dict(row) for row in connection.execute('SELECT 业绩ID,项目名称 FROM 公司业绩表 ORDER BY 项目名称,业绩ID')]
+            return [dict(row) for row in connection.execute('SELECT 业绩ID,项目名称 FROM 公司业绩表 ORDER BY 业绩ID')]
 
     @staticmethod
     def title(row):
@@ -90,8 +90,8 @@ class FinanceRepository(_ReportRepository):
     def search(self, year=''):
         with runtime_connection(self.database_path) as connection:
             rows = [dict(row) for row in connection.execute(
-                self.select_sql + " WHERE R.财务报告年度 LIKE ? ESCAPE '\\'", (f'%{_escape_like(year.strip())}%',))]
-        return sorted(rows, key=self.order_key)
+                self.select_sql + " WHERE R.财务报告年度 LIKE ? ESCAPE '\\' ORDER BY R.年度ID", (f'%{_escape_like(year.strip())}%',))]
+        return rows
 
     @staticmethod
     def title(row):

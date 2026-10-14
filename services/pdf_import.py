@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import pymupdf
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QTransform
 
@@ -28,6 +27,7 @@ def render_pdf(source_path, settings=None):
         raise ValueError(f"请选择有效的 PDF 文件：{source}")
     if source.resolve() == DATA_ROOT.resolve() or DATA_ROOT.resolve() in source.resolve().parents:
         raise ValueError("请选择 TenderSystem 项目目录外的 PDF 原件")
+    import pymupdf
     with TemporaryDirectory(prefix="TenderSystem_pdf_") as directory:
         pages = []
         with pymupdf.open(str(source)) as document:

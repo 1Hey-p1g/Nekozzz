@@ -421,7 +421,7 @@ class AutoFillTests(unittest.TestCase):
                           [(5000, '职称证', '高级工程师'), (5001, '职称证', '工程师'),
                            (5002, '职称证', '工程师'), (5003, '职称证明', '不得进入')])
         self.db_hash = hashlib.sha256(self.db.read_bytes()).hexdigest()
-        expected = professional_titles(self.people.certificates.for_person(1))
+        expected = professional_titles(self.people.certificates.for_person(1, document_order=True))
         table = core.parse_xml(self.service.build_plan(self.task, self.settings).blocks[0].table)
         actual = core.value_text(core.cell_at(table, core.BLOCKS[0].targets()['title']))
         self.assertEqual(actual, expected)

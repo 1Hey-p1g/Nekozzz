@@ -68,8 +68,15 @@ class RowsModel(QAbstractTableModel):
         self.active_id = None
 
     def set_rows(self, rows):
+        rows = list(rows)
+        # Display defaults only. Word services retain their explicit page/type
+        # order; task QListWidgets and ID-less type lists remain user ordered.
+        for key in ('ID', '证书ID', '资质ID', '获奖ID', '年度ID', '业绩ID', '人员ID', '公司ID'):
+            if rows and all(type(row.get(key)) is int for row in rows):
+                rows.sort(key=lambda row: row[key])
+                break
         self.beginResetModel()
-        self.rows = list(rows)
+        self.rows = rows
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):

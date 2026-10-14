@@ -14,9 +14,16 @@
 
 Nekozzz 主要面向离线使用，业务资料保存在本地，没有联网功能。
 
-## What's New in v0.9.3
+## What's New in v0.9.4
 
-发布准备中，尚未正式发布。
+- 启动先准备首屏，其他业务页面和 Excel/PDF/Access 模块按需加载；切页后复用页面状态。
+- 人员选择直接进入多人 Word 输出，一人也能照常输出；新增证书名称、状态与姓名组合搜索，证书列表显示有效期和状态。
+- 业务列表默认按 ID 升序；公司证书首次显示公司 ID=1 的全部证书；记住窗口位置、大小和最大化状态。
+- Word/WPS 的窄列表格仍可能有不同的文字换行结果。
+
+[下载 v0.9.4 Windows x64 Portable](https://github.com/1Hey-p1g/Nekozzz/releases/download/v0.9.4/Nekozzz-0.9.4-Windows-x64.zip) · [完整发行资料与源码](https://github.com/1Hey-p1g/Nekozzz/releases/tag/v0.9.4)
+
+## What's New in v0.9.3
 
 **新功能**
 
@@ -89,7 +96,7 @@ Copyright © 2026 1Hey-p1g
 
 Windows binary 发布前必须提供该发行包的对应源码，而不是只链接最新版源码。
 源码与第三方 copyleft 组件交付计划见 [SOURCE_AVAILABILITY.md](SOURCE_AVAILABILITY.md)。
-v0.9.2 验收 RC 的行为已通过开发者人工验收，其发行合规结论为 **B. READY EXCEPT FOR MANUAL PUBLICATION**，见 [v0.9.2 最终发行报告](NEKOZZZ_0.9.2_FINAL_RELEASE_CLEARANCE.md)。该结论仅适用于 v0.9.2。v0.9.3 RC1 的完整业务、Word/WPS、公司基本信息、备份恢复及 Access 迁移已由开发者人工验收通过；历史 Access 自动测试夹具仍缺失，不代表全量自动测试通过。当前仍需核对 Git 对应提交、上传 Draft 及确认对应源码下载访问，公开发布须另行确认，见 [v0.9.3 审计报告](NEKOZZZ_0.9.3_RELEASE_AUDIT.md)。
+v0.9.2 验收 RC 的行为已通过开发者人工验收，其发行合规结论为 **B. READY EXCEPT FOR MANUAL PUBLICATION**，见 [v0.9.2 最终发行报告](NEKOZZZ_0.9.2_FINAL_RELEASE_CLEARANCE.md)。该结论仅适用于 v0.9.2。v0.9.3 RC1 的完整业务、Word/WPS、公司基本信息、备份恢复及 Access 迁移已由开发者人工验收通过；历史 Access 自动测试夹具仍缺失，不代表全量自动测试通过。v0.9.3 已正式发布，历史记录见 [v0.9.3 审计报告](NEKOZZZ_0.9.3_RELEASE_AUDIT.md)。当前 v0.9.4 的源码回归 294/294 与打包诊断通过，RC 已由开发者人工验收通过；发行资料见 [v0.9.4 Release](https://github.com/1Hey-p1g/Nekozzz/releases/tag/v0.9.4)，历史测试限制不代表当前测试结果。
 
 ## Development
 

@@ -66,7 +66,7 @@ class PeopleWorkflowTests(unittest.TestCase):
         self.assertEqual([self.bo], [row["人员ID"] for row in self.service.people.search("波", "工程师")])
         self.assertEqual([], self.service.people.search("安", "不存在"))
         for _ in range(3):
-            self.assertEqual([self.cert_high, self.cert_low], [
+            self.assertEqual([self.cert_low, self.cert_high], [
                 row["证书ID"] for row in self.service.certificates.for_person(self.anna)
             ])
             self.assertEqual([self.cert_bo], [row["证书ID"] for row in self.service.certificates.for_person(self.bo)])
@@ -124,38 +124,60 @@ class PeopleWorkflowTests(unittest.TestCase):
         window = build_main_window(self.service, self.database)
         self.addCleanup(window.close)
         stack = window.findChild(QStackedWidget, "workspace")
-        self.assertIs(stack.currentWidget(), window.search_page)
-        self.assertTrue(window.findChild(QPushButton, "navProjectSearch").isEnabled())
-        search = window.search_page
-        search.name_filter.setText("安")
-        search.search_people()
-        self.assertEqual(self.anna, search.current_person_id)
-        self.assertEqual(self.cert_high, search.certificate_model.rows[0]["证书ID"])
-        search.certificate_model.setData(search.certificate_model.index(0, 0), Qt.Checked, Qt.CheckStateRole)
-        self.assertEqual(frozenset({self.cert_high}), search.selected_certificate_ids())
-        self.assertEqual(self.cert_high, search.selected_certificates()[0]["证书ID"])
-        self.assertIn("图片文件尚未就位", search.preview.text())
-        search.name_filter.setText("波")
-        search.search_people()
-        self.assertEqual(self.cert_bo, search.certificate_model.rows[0]["证书ID"])
-        search.name_filter.clear()
-        search.search_people()
-        self.assertIn(self.cert_high, search.selected_certificate_ids())
-        window.findChild(QPushButton, "navPersonManage").click()
+        page = window.person_word_page
+        self.assertIs(stack.currentWidget(), page)
+        self.assertNotIn('search_page', window.created_pages)
+        page.name_filter.setText('安')
+        page.search_people()
+        page.add_person(page.people_model.index(0, 0))
+        self.assertEqual(self.anna, page.viewed_person_id)
+        self.assertEqual([self.cert_low, self.cert_high], [r['证书ID'] for r in page.certificate_model.rows])
+        page.certificates_view.setCurrentIndex(page.certificate_model.index(1, 1))
+        page.certificate_model.setData(page.certificate_model.index(1, 0), Qt.Checked, Qt.CheckStateRole)
+        self.assertEqual({self.cert_high}, page.job.item(self.anna).selected_certificate_ids)
+        self.assertIn('图片文件尚未就位', page.preview.text())
+        page.name_filter.setText('波')
+        page.search_people()
+        page.add_person(page.people_model.index(0, 0))
+        self.assertEqual(self.bo, page.viewed_person_id)
+        self.assertEqual(self.cert_bo, page.certificate_model.rows[0]['证书ID'])
+        window.findChild(QPushButton, 'navPersonManage').click()
         self.assertIs(stack.currentWidget(), window.manage_page)
-        window.findChild(QPushButton, "navPersonSearch").click()
-        self.assertIs(stack.currentWidget(), window.search_page)
+        window.findChild(QPushButton, 'navPersonSearch').click()
+        self.assertIs(stack.currentWidget(), page)
+        self.assertEqual('波', page.name_filter.text())
+        self.assertEqual({self.cert_high}, page.job.item(self.anna).selected_certificate_ids)
         self.assertEqual(before, hashlib.sha256(self.database.read_bytes()).digest())
+
+    def _legacy_search_window(self):
+        """Retain standalone retired-component copy/paint regression coverage.
+
+        This fixture is deliberately outside production navigation. Current
+        navigation/multi-person behavior has its own assertions below.
+        """
+        from PySide6.QtWidgets import QMainWindow
+        from gui.person_search import PersonSearchPage
+        from gui.copy_toast import CopyToast
+        from gui.main_window import STYLE
+        window = QMainWindow()
+        stack = QStackedWidget(window)
+        window.setCentralWidget(stack)
+        window.copy_toast = CopyToast(stack)
+        window.legacy_search_page = PersonSearchPage(self.service, copy_to_clipboard=window.copy_toast.copy)
+        stack.addWidget(window.legacy_search_page)
+        window.setStyleSheet(STYLE)
+        window.resize(1200, 850)
+        return window
 
     def test_search_layout_copyable_summary_and_derived_fields(self):
         values = self.service.people.get(self.anna)
         values["身份证号"] = "11010519491231002X"
         self.service.update_person(self.anna, values)
-        window = build_main_window(self.service, self.database)
+        window = self._legacy_search_window()
         self.addCleanup(window.close)
         window.show()
         self.app.processEvents()
-        search = window.search_page
+        search = window.legacy_search_page
         self.assertEqual(1, search.person_model.columnCount())
         self.assertEqual("姓名", search.person_model.headerData(0, Qt.Horizontal))
         self.assertEqual(search.people_view.mapTo(search, QPoint(0, 0)).y(),
@@ -171,24 +193,24 @@ class PeopleWorkflowTests(unittest.TestCase):
 
     def test_mouse_checkbox_cell_copy_and_attachment_switch(self):
         before = hashlib.sha256(self.database.read_bytes()).digest()
-        window = build_main_window(self.service, self.database)
+        window = self._legacy_search_window()
         self.addCleanup(window.close)
         window.show()
         self.app.processEvents()
-        search = window.search_page
+        search = window.legacy_search_page
         search.name_filter.setText("安")
         search.search_people()
         view = search.certificates_view
-        first = search.certificate_model.index(0, 0)
+        first = search.certificate_model.index(1, 0)
         QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=view.visualRect(first).center())
         self.app.processEvents()
         self.assertEqual(Qt.Checked, search.certificate_model.data(first, Qt.CheckStateRole))
         self.assertEqual(frozenset({self.cert_high}), search.selected_certificate_ids())
         self.assertIn("1", search.selected_count.text())
-        other_cell = search.certificate_model.index(1, 2)
+        other_cell = search.certificate_model.index(0, 2)
         QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=view.visualRect(other_cell).center())
         self.app.processEvents()
-        self.assertEqual(1, view.currentIndex().row())
+        self.assertEqual(0, view.currentIndex().row())
         self.assertEqual(0, len(search.attachment_model.rows))
         self.assertEqual(frozenset({self.cert_high}), search.selected_certificate_ids())
         self.assertEqual(view.selectionBehavior(), QAbstractItemView.SelectItems)
@@ -204,17 +226,17 @@ class PeopleWorkflowTests(unittest.TestCase):
         self.assertEqual(before, hashlib.sha256(self.database.read_bytes()).digest())
 
     def test_checkbox_remains_painted_and_only_active_first_cell_is_highlighted(self):
-        window = build_main_window(self.service, self.database)
+        window = self._legacy_search_window()
         self.addCleanup(window.close)
         window.show()
         self.app.processEvents()
-        search = window.search_page
+        search = window.legacy_search_page
         search.name_filter.setText("安")
         search.search_people()
         view = search.certificates_view
         model = search.certificate_model
-        first = model.index(0, 0)
-        second = model.index(1, 0)
+        first = model.index(1, 0)
+        second = model.index(0, 0)
 
         def checkbox_is_visible(index):
             cell = view.visualRect(index)
@@ -234,7 +256,7 @@ class PeopleWorkflowTests(unittest.TestCase):
         self.app.processEvents()
         self.assertEqual(Qt.Checked, model.data(first, Qt.CheckStateRole))
         checkbox_is_visible(first)
-        viewed_other = model.index(1, 2)
+        viewed_other = model.index(0, 2)
         QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=view.visualRect(viewed_other).center())
         self.app.processEvents()
         self.assertEqual(self.cert_low, model.active_id)
@@ -260,18 +282,18 @@ class PeopleWorkflowTests(unittest.TestCase):
 
     def test_double_click_copies_raw_and_display_values_without_database_writes(self):
         before = hashlib.sha256(self.database.read_bytes()).digest()
-        window = build_main_window(self.service, self.database)
+        window = self._legacy_search_window()
         self.addCleanup(window.close)
         window.show()
         self.app.processEvents()
-        search = window.search_page
+        search = window.legacy_search_page
         search.name_filter.setText("安")
         search.search_people()
         view = search.certificates_view
         model = search.certificate_model
         self.assertEqual(QAbstractItemView.SingleSelection, view.selectionMode())
         for column, expected in ((1, "执业证"), (2, "注册证"), (3, "A-2"), (5, "长期有效")):
-            index = model.index(0, column)
+            index = model.index(1, column)
             QTest.mouseDClick(view.viewport(), Qt.LeftButton, pos=view.visualRect(index).center())
             self.app.processEvents()
             self.assertEqual(expected, self.app.clipboard().text())
@@ -279,15 +301,15 @@ class PeopleWorkflowTests(unittest.TestCase):
             self.assertTrue(window.copy_toast.isVisible())
         self.app.clipboard().setText("sentinel")
         window.copy_toast.hide()
-        empty = model.index(0, 4)
+        empty = model.index(1, 4)
         QTest.mouseDClick(view.viewport(), Qt.LeftButton, pos=view.visualRect(empty).center())
         self.assertEqual("sentinel", self.app.clipboard().text())
         self.assertFalse(window.copy_toast.isVisible())
-        checkbox = model.index(0, 0)
+        checkbox = model.index(1, 0)
         QTest.mouseDClick(view.viewport(), Qt.LeftButton, pos=view.visualRect(checkbox).center())
         self.assertEqual("sentinel", self.app.clipboard().text())
         self.assertFalse(window.copy_toast.isVisible())
-        dated = model.index(1, 4)
+        dated = model.index(0, 4)
         QTest.mouseDClick(view.viewport(), Qt.LeftButton, pos=view.visualRect(dated).center())
         self.assertEqual("2030-12-31", self.app.clipboard().text())
         self.assertEqual(self.cert_low, model.active_id)
@@ -398,7 +420,7 @@ class PeopleWorkflowTests(unittest.TestCase):
         self.assertEqual("尚未保存", manage.person_inputs["姓名"].text())
         with patch.object(QMessageBox, "question", return_value=QMessageBox.Discard):
             window.findChild(QPushButton, "navPersonSearch").click()
-        self.assertIs(stack.currentWidget(), window.search_page)
+        self.assertIs(stack.currentWidget(), window.person_word_page)
         self.assertEqual("view", manage.mode)
 
     def test_preview_rejects_missing_image_without_deleting_record(self):

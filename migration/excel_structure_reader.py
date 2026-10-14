@@ -1,7 +1,7 @@
-from openpyxl import load_workbook
 
 
 def get_table_names(excel_file):
+    from openpyxl import load_workbook
 
     workbook = load_workbook(
         excel_file,
@@ -25,6 +25,7 @@ def get_table_names(excel_file):
 
 
 def get_table_fields(excel_file, table_name):
+    from openpyxl import load_workbook
 
     workbook = load_workbook(
         excel_file,
@@ -62,6 +63,7 @@ def get_table_fields(excel_file, table_name):
 
 
 def get_relationships(excel_file):
+    from openpyxl import load_workbook
     workbook = load_workbook(
         excel_file,
         read_only=True
@@ -218,6 +220,7 @@ def get_all_primary_keys(excel_file):
 
 
 def get_indexes(excel_file):
+    from openpyxl import load_workbook
 
     workbook = load_workbook(
         excel_file,

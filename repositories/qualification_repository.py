@@ -17,7 +17,7 @@ class QualificationRepository:
     def companies(self):
         with runtime_connection(self.database_path) as connection:
             return [dict(row) for row in connection.execute(
-                'SELECT 公司ID,公司名称 FROM 公司信息表 ORDER BY 公司名称,公司ID')]
+                'SELECT 公司ID,公司名称 FROM 公司信息表 ORDER BY 公司ID')]
 
     def company_info(self, company_id):
         with runtime_connection(self.database_path) as connection:
@@ -49,7 +49,7 @@ class QualificationRepository:
         with runtime_connection(self.database_path) as connection:
             return [dict(row) for row in connection.execute(
                 'SELECT Q.*,C.公司名称 FROM 公司资质表 Q JOIN 公司信息表 C ON C.公司ID=Q.公司ID '
-                'WHERE ' + ' AND '.join(conditions) + ' ORDER BY Q.资质证书名称,Q.资质等级,Q.资质ID', parameters)]
+                'WHERE ' + ' AND '.join(conditions) + ' ORDER BY Q.资质ID', parameters)]
 
     def get(self, qualification_id):
         with runtime_connection(self.database_path) as connection:

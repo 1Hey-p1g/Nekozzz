@@ -1,4 +1,3 @@
-import pyodbc
 from pathlib import Path
 
 from config.paths import PROJECT_ROOT
@@ -7,6 +6,7 @@ from config.paths import PROJECT_ROOT
 # 连接 Access
 # =========================
 def get_access_connection(access_file):
+    import pyodbc
 
     access_file = Path(access_file).resolve()
     if not access_file.is_file():

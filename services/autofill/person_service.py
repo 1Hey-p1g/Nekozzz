@@ -76,11 +76,11 @@ class PersonAutoFillService:
             cursor_factory = WordTableCursor
         self.cursor_factory = cursor_factory
 
-    def certificates(self, person_id):
-        return self.people_service.certificates.for_person(person_id)
+    def certificates(self, person_id, *, document_order=False):
+        return self.people_service.certificates.for_person(person_id, document_order=document_order)
 
-    def projects(self, person_id):
-        return self.people_service.people.projects(person_id)
+    def projects(self, person_id, *, document_order=False):
+        return self.people_service.people.projects(person_id, document_order=document_order)
 
     def build_plan(self, task, settings):
         try:
@@ -102,12 +102,12 @@ class PersonAutoFillService:
             if not person or value(person['姓名']) == '/':
                 raise AutoFillPreflightError(f'人员 {entry.person_id} 不存在或姓名为空')
             records[entry.person_id] = person
-            certs = {c['证书ID']: c for c in self.certificates(entry.person_id)}
+            certs = {c['证书ID']: c for c in self.certificates(entry.person_id, document_order=True)}
             certificates.update(certs)
             for chosen in (entry.table_certificate_ids, entry.attachment_certificate_ids):
                 if not chosen <= certs.keys():
                     raise AutoFillPreflightError(f"{person['姓名']}：选择的证书不存在或不属于此人员")
-            projects = self.projects(entry.person_id)
+            projects = self.projects(entry.person_id, document_order=True)
             if not entry.table_project_ids <= {p['ID'] for p in projects}:
                 raise AutoFillPreflightError(f"{person['姓名']}：选择的业绩不存在或不属于此人员")
             cert_text = '\n'.join(' '.join(str(v).strip() for v in (certs[i]['证书名称'] or certs[i]['证书类型'], certs[i]['证书编号']) if v is not None and str(v).strip()) or '/' for i in sorted(entry.table_certificate_ids))

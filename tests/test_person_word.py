@@ -109,8 +109,8 @@ class PersonWordTests(unittest.TestCase):
         self.addCleanup(window.close)
         window.show()
         self.app.processEvents()
-        buttons = window.search_page.layout().itemAt(0).widget().findChildren(QPushButton)
-        next(button for button in buttons if button.text() == "多人 Word 输出").click()
+        self.assertIs(window.workspace.currentWidget(), window.person_word_page)
+        self.assertEqual([], window.findChildren(QPushButton, "personModeButton"))
         return window, window.person_word_page
 
     def _double_click_person(self, page, row):
@@ -254,9 +254,9 @@ class PersonWordTests(unittest.TestCase):
         window.show()
         self.app.processEvents()
         stack = window.findChild(QStackedWidget, "workspace")
-        self.assertIs(stack.currentWidget(), window.search_page)
-        buttons = window.search_page.layout().itemAt(0).widget().findChildren(QPushButton)
-        next(button for button in buttons if button.text() == "多人 Word 输出").click()
+        self.assertIs(stack.currentWidget(), window.person_word_page)
+        self.assertIs(window.workspace.currentWidget(), window.person_word_page)
+        self.assertEqual([], window.findChildren(QPushButton, "personModeButton"))
         page = window.person_word_page
         self.assertIs(stack.currentWidget(), page)
         first = page.people_view.visualRect(page.people_model.index(0, 0)).center()
@@ -304,7 +304,7 @@ class PersonWordTests(unittest.TestCase):
         self.assertIs(stack.currentWidget(), page)
         self.assertEqual(1, len(page.job.item(1).selected_certificate_ids))
         self.assertTrue(page.insert_name.isChecked())
-        self.assertEqual(set(), window.search_page.checked_ids)
+        self.assertNotIn("search_page", window.created_pages)
 
     def test_double_click_duplicate_and_row_delete_selects_neighbor(self):
         window, page = self._show_multi_page()
@@ -372,7 +372,7 @@ class PersonWordTests(unittest.TestCase):
     def test_summary_preview_numeric_order_missing_file_and_copy(self):
         window, page = self._show_multi_page()
         self._double_click_person(page, 0)
-        self.assertEqual(window.search_page.person_info.text(), page.person_info.text())
+        self.assertIn(self.people.people.get(1)["姓名"], page.person_info.text())
         self.assertTrue(page.person_info.textInteractionFlags() & Qt.TextSelectableByMouse)
         first_id = page.certificate_model.rows[0]["证书ID"]
         self.assertEqual(first_id, page.certificate_model.active_id)
@@ -382,7 +382,9 @@ class PersonWordTests(unittest.TestCase):
         cell = page.certificates_view.visualRect(page.certificate_model.index(cert_row, 2)).center()
         QTest.mouseClick(page.certificates_view.viewport(), Qt.LeftButton, pos=cell)
         self.assertEqual(5, page.certificate_model.active_id)
-        self.assertEqual(["1", "2", "10"], [row["备注"] for row in page.attachment_model.rows])
+        self.assertEqual(sorted(row['ID'] for row in page.attachment_model.rows),
+                         [row['ID'] for row in page.attachment_model.rows])
+        self.assertEqual(["1", "2", "10"], [row['备注'] for row in self.people.certificates.attachments(5)])
         self.assertEqual(set(), page.job.item(1).selected_certificate_ids)
         QGuiApplication.clipboard().setText("unchanged")
         for column, field in ((1, "证书类型"), (2, "证书名称"), (3, "证书编号")):

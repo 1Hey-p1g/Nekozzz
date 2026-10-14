@@ -53,7 +53,7 @@ class AboutPageTests(unittest.TestCase):
                     settings_button.click()
                     self.assertIs(stack.currentWidget(), window.settings_page)
                     window.findChild(QPushButton, 'navPersonSearch').click()
-                    self.assertIs(stack.currentWidget(), window.search_page)
+                    self.assertIs(stack.currentWidget(), window.person_word_page)
                     about.click()
                     self.assertIs(stack.currentWidget(), window.about_page)
                 self.assertFalse(settings.path.exists())

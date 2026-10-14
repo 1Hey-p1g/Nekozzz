@@ -196,13 +196,16 @@ class PersonBrowserTests(unittest.TestCase):
         self.assertEqual(1,p.viewed_person_id)
         self.assertFalse(p.certificate_model.checks_enabled)
 
-    def test_search_refresh_preserves_valid_view_and_invalid_person_clears(self):
+    def test_search_refresh_clears_filtered_view_and_invalid_person(self):
         p = self.page
         self.browse(2)
         p.name_filter.setText('not found')
         p.search_people()
-        self.assertEqual(2,p.viewed_person_id)
-        self.assertIn('李四',p.person_info.text())
+        self.assertIsNone(p.viewed_person_id)
+        self.assertEqual([],p.certificate_model.rows)
+        p.name_filter.clear()
+        p.search_people()
+        self.browse(2)
         with patch.object(self.f.people.people,'get',return_value=None):
             p.search_people()
         self.assertIsNone(p.viewed_person_id)

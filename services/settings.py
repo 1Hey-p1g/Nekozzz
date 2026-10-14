@@ -28,6 +28,7 @@ class PdfSettings:
     autofill_note_style: str = ''
     autofill_person_name_style: str = ''
     writer_target: str = 'word'
+    window_geometry: str = ''
 
     def normalized(self):
         if not isinstance(self.image_style, str) or not isinstance(self.person_name_style, str):
@@ -47,6 +48,7 @@ class PdfSettings:
             raise ValueError("公司资质名称顺序必须为文本列表")
         return replace(
             self,
+            window_geometry=self.window_geometry if isinstance(self.window_geometry, str) and len(self.window_geometry) <= 16384 else '',
             image_style=self.image_style.strip() or "图片",
             person_name_style=self.person_name_style.strip() or "标题 4",
             autofill_title_style=self.autofill_title_style.strip(),

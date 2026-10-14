@@ -92,7 +92,7 @@ class DataManagementTests(unittest.TestCase):
 
     def test_versions_are_independent_and_runtime_stays_v1(self):
         self.assertEqual('Nekozzz', APP_NAME)
-        self.assertEqual('0.9.3', APP_VERSION)
+        self.assertEqual('0.9.4', APP_VERSION)
         self.assertEqual(1, DB_SCHEMA_VERSION)
         self.assertEqual(1, BACKUP_FORMAT_VERSION)
         with runtime_connection(self.db) as connection:
@@ -333,7 +333,7 @@ class DataManagementTests(unittest.TestCase):
             self.assertEqual(self.service.migration_resource, excel_file)
             create_empty_database(target_path)
             return {'rows': 0}
-        with patch('services.data_management.migrate_access', side_effect=fake_migration) as manager:
+        with patch('migration.migration_manager.migrate_access', side_effect=fake_migration) as manager:
             self.service.migrate(source, target)
             manager.assert_called_once()
             with self.assertRaises(FileExistsError):

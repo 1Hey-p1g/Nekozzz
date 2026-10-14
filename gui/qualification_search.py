@@ -120,28 +120,43 @@ class QualificationSearchPage(QWidget):
         self.attachments_view.selectionModel().currentRowChanged.connect(self.attachment_changed)
         self.clear_selection_button.clicked.connect(self.clear_selection)
         self.output_button.clicked.connect(self.insert_to_word)
-        self.company.currentIndexChanged.connect(self.refresh_company_info)
+        self.company.currentIndexChanged.connect(self.company_changed)
+        self._company_default_pending = True
+        self._retained_company_id = 1
         self.refresh_companies()
         self.search()
         self.update_count()
 
     def refresh_companies(self):
-        selected = self.company.currentData()
+        selected = (1 if self._company_default_pending else
+                    self.company.currentData() if self.company_list_available else self._retained_company_id)
+        self._retained_company_id = selected
         self.company.blockSignals(True)
         try:
             self.company.clear()
             self.company.addItem('全部公司', None)
             for company in self.service.qualifications.companies():
                 self.company.addItem(f"{company['公司名称']}（ID {company['公司ID']}）", company['公司ID'])
-            self.company.setCurrentIndex(max(0, self.company.findData(selected)))
+            index = self.company.findData(selected)
+            if index < 0 and selected is not None:
+                self.company.addItem(f'公司 ID {selected}（暂无记录）', selected)
+                index = self.company.count() - 1
+            self.company.setCurrentIndex(max(0, index))
             self.company_list_available = True
+            self._company_default_pending = False
         except Exception as error:
             self.company_list_available = False
             self.company_info.display(None)
             self.error_label.setText(f'公司列表加载失败：{error}')
         finally:
             self.company.blockSignals(False)
+            self.company.setEnabled(self.company_list_available)
         self.refresh_company_info()
+
+    def company_changed(self, *_):
+        self._retained_company_id = self.company.currentData()
+        self.refresh_company_info()
+        self.search()
 
     def refresh_company_info(self, *_):
         self.company_info.display(None)
@@ -157,6 +172,12 @@ class QualificationSearchPage(QWidget):
             self.error_label.setText(f'公司信息加载失败：{error}')
 
     def search(self):
+        if not self.company_list_available:
+            self.model.set_rows([])
+            self.model.set_active_id(None)
+            self.clear_preview()
+            self.update_count()
+            return
         try:
             rows = self.service.search(name=self.name_input.text(), grade=self.grade_input.text(),
                                        company_id=self.company.currentData(), status=self.status.currentData())

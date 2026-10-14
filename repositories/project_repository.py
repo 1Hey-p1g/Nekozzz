@@ -32,7 +32,7 @@ class ProjectRepository:
         if leader.strip():
             clauses.append("N.姓名 LIKE ? ESCAPE '\\'")
             parameters.append('%' + _escape_like(leader.strip()) + '%')
-        sql = _SELECT + (' WHERE ' + ' AND '.join(clauses) if clauses else '') + ' ORDER BY P.项目名称,P.业绩ID'
+        sql = _SELECT + (' WHERE ' + ' AND '.join(clauses) if clauses else '') + ' ORDER BY P.业绩ID'
         with runtime_connection(self.database_path) as connection:
             return [dict(row) for row in connection.execute(sql, parameters)]
 
@@ -47,7 +47,7 @@ class ProjectRepository:
                 'SELECT R.ID AS relation_id,R.业绩ID AS project_id,R.人员ID AS person_id,'
                 'N.姓名 AS person_name,R.担任角色 AS role FROM 人员业绩表 R '
                 'JOIN 人员表 N ON N.人员ID=R.人员ID WHERE R.业绩ID=? '
-                "ORDER BY CASE WHEN R.担任角色='项目负责人' THEN 0 ELSE 1 END,R.ID", (project_id,))]
+                "ORDER BY R.ID", (project_id,))]
 
     def save(self, project_id, values, leader_id=None, *, personnel=None):
         with runtime_connection(self.database_path, write=True) as connection:

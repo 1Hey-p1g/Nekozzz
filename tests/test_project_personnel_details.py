@@ -47,7 +47,9 @@ class PersonnelDetailsTests(unittest.TestCase):
         with patch.object(f.service.projects,'project_personnel',wraps=f.service.projects.project_personnel) as query:
             self.select(f.a)
             query.assert_called_once_with(f.a)
-        self.assertEqual([('项目负责人','张三'),('技术负责人','李四'),('安全员','王五'),('资料员','陈七')],self.texts())
+        self.assertEqual([('技术负责人','李四'),('项目负责人','张三'),('安全员','王五'),('资料员','陈七')],self.texts())
+        ids = [row['relation_id'] for row in p.personnel_model.rows]
+        self.assertEqual(sorted(ids), ids)
         self.assertEqual(['担任职务','姓名'],[p.personnel_model.headerData(i,Qt.Horizontal) for i in range(2)])
         self.assertEqual(2,p.personnel_model.columnCount())
         self.assertEqual(QAbstractItemView.NoEditTriggers,p.personnel_view.editTriggers())
@@ -89,7 +91,8 @@ class PersonnelDetailsTests(unittest.TestCase):
         p.job.item(f.a).selected_attachment_types.add('合同')
         state = (p.task_list.person_ids(),p.current_id(),set(p.type_model.checked),list(p.project_model.rows),p.projects_view.currentIndex())
         for column,text in ((0,'技术负责人'),(1,'李四')):
-            index = p.personnel_model.index(1,column)
+            row_index = next(i for i, row in enumerate(p.personnel_model.rows) if row['role'] == '技术负责人')
+            index = p.personnel_model.index(row_index,column)
             p.personnel_view.scrollTo(index)
             f.app.processEvents()
             point = p.personnel_view.visualRect(index).center()

@@ -9,7 +9,8 @@ CERTIFICATE_PRIORITY = (
     "技师证", "特种作业证", "身份证", "安全生产管理人员", "特种设备管理证", "急救员证",
 )
 CERTIFICATE_FIELDS = ("人员ID", "证书类型", "证书名称", "证书编号", "有效期")
-_ORDER = "CASE C.证书类型 " + " ".join(
+_ORDER = 'C.证书ID'
+_DOCUMENT_ORDER = "CASE C.证书类型 " + " ".join(
     f"WHEN '{value}' THEN {index}" for index, value in enumerate(CERTIFICATE_PRIORITY, 1)
 ) + " ELSE 99 END, C.证书类型, C.证书名称, C.证书ID"
 
@@ -18,12 +19,12 @@ class CertificateRepository:
     def __init__(self, database_path):
         self.database_path = database_path
 
-    def for_person(self, person_id, name_filter=""):
+    def for_person(self, person_id, name_filter="", *, document_order=False):
         with runtime_connection(self.database_path) as connection:
             return [dict(row) for row in connection.execute(
                 'SELECT C.证书ID,C.人员ID,C.证书类型,C.证书名称,C.证书编号,C.有效期 '
                 'FROM 人员证书表 AS C WHERE C.人员ID=? AND C.证书名称 LIKE ? ESCAPE \'\\\' '
-                f'ORDER BY {_ORDER}',
+                f'ORDER BY {_DOCUMENT_ORDER if document_order else _ORDER}',
                 (person_id, f"%{_escape_like(name_filter.strip())}%"),
             )]
 
